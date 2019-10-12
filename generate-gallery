@@ -1,0 +1,144 @@
+#!/usr/bin/python3
+#
+# Copyright (C) 2019, Benjamin Drung <bdrung@posteo.de>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name
+
+"""Generate picture gallery using fgallery (configured by YAML file).
+
+Example YAML configuration `example.yaml`:
+
+```YAML
+output_dir: fgallery
+temp_dir: fgallery/source
+galleries:
+  - name: example_gallery
+    source: pictures/2019/example/*.jpg
+```
+
+Running `generate-gallery -c example.yaml` would create `fgallery/example_gallery` using the
+pictures from `pictures/2019/example/*.jpg`. The paths can be absolute or relative to the
+configuration file.
+"""
+
+import argparse
+import glob
+import logging
+import os
+import shutil
+import subprocess
+import sys
+
+import yaml
+
+
+LOG_FORMAT = "%(levelname)s: %(message)s"
+THREADS = 5
+
+
+class Gallery:
+    """Represents a picture gallery."""
+    def __init__(self, source_glob, output_dir):
+        self.source_glob = source_glob
+        self.output_dir = output_dir
+        self.logger = logging.getLogger(__name__)
+
+    def exists(self):
+        """Check if the generated gallery already exists."""
+        return os.path.isdir(self.output_dir)
+
+    def generate(self, temp_basedir, dry_run):
+        """Generate gallery using fgallery."""
+        self.logger.info("Generating gallery in '%s'...", self.output_dir)
+        source_files = glob.glob(self.source_glob)
+        if not source_files:
+            self.logger.warning("Found no source files in '%s'.", self.source_glob)
+            return
+        self.logger.info("Found %i source files in '%s'.", len(source_files), self.source_glob)
+
+        temp_dir = os.path.join(temp_basedir, os.path.basename(os.path.dirname(source_files[0])))
+        self.logger.info("Checking/creating source symlinks in '%s'.", temp_dir)
+        if not os.path.isdir(temp_dir):
+            os.mkdir(temp_dir)
+
+        for source_file in source_files:
+            target = os.path.join(temp_dir, os.path.basename(source_file))
+            source = os.path.relpath(source_file, os.path.dirname(target))
+            if os.path.islink(target) and os.readlink(target) == source:
+                continue
+            self.logger.info("Creating symlink '%s' -> '%s'...", target, source)
+            if not dry_run:
+                if os.path.islink(target):
+                    os.remove(target)
+                os.symlink(source, target)
+
+        cmd = ["fgallery", "-v", "-j", str(THREADS), "-i", temp_dir, self.output_dir]
+        self.logger.info("%s '%s'...", "Simulate calling" if dry_run else "Calling",
+                         escape_cmd(cmd))
+        if not dry_run:
+            top_output_dir = os.path.dirname(self.output_dir)
+            if not os.path.isdir(top_output_dir):
+                os.makedirs(top_output_dir)
+            subprocess.check_call(cmd)
+
+
+def escape_cmd(cmd):
+    """Escape command."""
+    cmd = ['"' + x + '"' if " " in x else x for x in cmd]
+    return " ".join(cmd)
+
+
+def main():
+    """Main function with argument parsing."""
+    parser = argparse.ArgumentParser(description="Generate picture gallery using fgallery "
+                                                 "(configured by YAML file).")
+    parser.add_argument("-c", "--config", required=True, help="YAML configuration file")
+    parser.add_argument("-n", "--dry_run", action="store_true",
+                        help="just pretent, but do not remove any files")
+    parser.add_argument("-v", "--verbose", action="store_true", help="print more logging output")
+    args = parser.parse_args()
+    logging.basicConfig(format=LOG_FORMAT, level=logging.INFO if args.verbose else logging.WARNING)
+    logger = logging.getLogger(__name__)
+
+    if not shutil.which("fgallery"):
+        logger.error("fgallery not found in PATH. Please install fgallery!")
+        if not args.dry_run:
+            return 1
+
+    with open(args.config) as config_file:
+        config = yaml.load(config_file)
+
+    for directory in ("output_dir", "temp_dir"):
+        if not os.path.isabs(config[directory]):
+            config[directory] = os.path.join(os.path.dirname(args.config), config[directory])
+        if not os.path.isdir(config[directory]):
+            logger.info("Creating directory '%s'...", config[directory])
+            os.mkdir(config[directory])
+
+    for gallery_dict in config["galleries"]:
+        source = gallery_dict["source"]
+        if not os.path.isabs(source):
+            source = os.path.join(os.path.dirname(args.config), source)
+        gallery = Gallery(source, os.path.join(config["output_dir"], gallery_dict["name"]))
+        if gallery.exists():
+            logger.info("Gallery '%s' already exists.", gallery.output_dir)
+        else:
+            gallery.generate(config["temp_dir"], args.dry_run)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
