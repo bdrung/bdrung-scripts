@@ -22,7 +22,7 @@ import unittest
 
 def get_source_files():
     """Return a list of sources files/directories (to check with flake8/pylint)."""
-    scripts = ["generate-gallery"]
+    scripts = ["generate-gallery", "wallpaper-slideshow"]
     modules = ["tests"]
     py_files = []
 
