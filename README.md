@@ -36,3 +36,14 @@ wallpaper-slideshow -n "Vacation 2019" ~/Pictures/2019_Vacation"
 
 This would create a slideshow named `Vacation 2019` using all images from the
 directory `~/Pictures/2019_Vacation`.
+
+webcam-capture
+--------------
+
+`webcam-capture` uses FFmpeg to capture the output of Cam Link 4K device (Audio and Video).
+
+Example call:
+
+```
+webcam-capture
+```

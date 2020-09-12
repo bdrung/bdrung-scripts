@@ -1,0 +1,73 @@
+#!/bin/sh
+set -eu
+
+# Copyright (C) 2020, Benjamin Drung <bdrung@posteo.de>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+CRF=17
+#FRAMERATE=25
+PIX_FMT=yuv420p
+PRESET=veryfast
+
+if test -n "${1-}"; then
+    output_file="$1"
+else
+    output_file="$(date "+%Y-%m-%d_%H-%M-%S").mkv"
+fi
+
+# Find Cam Link 4K video device
+camlink_video=
+for device in /sys/class/video4linux/*; do
+    if test ! -e "$device"; then
+        break
+    fi
+
+    if grep -q "Cam Link 4K" "$device/name"; then
+        camlink_video=/dev/${device##*/}
+        echo "I: Found Cam Link 4K: $camlink_video" >&2
+        break
+    fi
+done
+
+if test -z "$camlink_video"; then
+    echo "Error: Failed to find Cam Link 4K." >&2
+    exit 1
+fi
+
+# Find Cam Link 4K audio device
+if test -e "/proc/asound/C4K/pcm0c"; then
+    camlink_audio=hw:CARD=C4K,DEV=0
+else
+    echo "Error: Failed to find Cam Link 4K audio 'hw:CARD=C4K,DEV=0' (no '/proc/asound/C4K/pcm0c'). Please check 'arecord -L'." >&2
+    exit 1
+fi
+
+# Check that output file does not exist. Otherwise increment the output filename.
+if test -e "$output_file"; then
+    existing="$output_file"
+    i=2
+    while test -e "$output_file"; do
+        output_file="${existing%.*}${i}.${output_file##*.}"
+        i=$((i + 1))
+    done
+    echo "I: \"$existing\" exists. Using \"$output_file\" instead." >&2
+fi
+
+echo "I: ffmpeg -f v4l2 -i $camlink_video -ac 2 -f alsa -i $camlink_audio -map 0:v:0 -map 1:a:0 -acodec pcm_s16le -vcodec libx264 -pix_fmt $PIX_FMT -crf $CRF -preset $PRESET -movflags +faststart \"$output_file\"" >&2
+exec ffmpeg -f v4l2 -i "$camlink_video" \
+    -ac 2 -f alsa -i "$camlink_audio" \
+    -map 0:v:0 -map 1:a:0 \
+    -acodec pcm_s16le \
+    -vcodec libx264 -pix_fmt $PIX_FMT -crf $CRF -preset $PRESET -movflags +faststart \
+    "$output_file"
