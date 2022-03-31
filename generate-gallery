@@ -44,13 +44,13 @@ import sys
 
 import yaml
 
-
 LOG_FORMAT = "%(levelname)s: %(message)s"
 THREADS = 5
 
 
 class Gallery:
     """Represents a picture gallery."""
+
     def __init__(self, source_glob, output_dir):
         self.source_glob = source_glob
         self.output_dir = output_dir
@@ -86,8 +86,9 @@ class Gallery:
                 os.symlink(source, target)
 
         cmd = ["fgallery", "-v", "-j", str(THREADS), "-i", temp_dir, self.output_dir]
-        self.logger.info("%s '%s'...", "Simulate calling" if dry_run else "Calling",
-                         escape_cmd(cmd))
+        self.logger.info(
+            "%s '%s'...", "Simulate calling" if dry_run else "Calling", escape_cmd(cmd)
+        )
         if not dry_run:
             top_output_dir = os.path.dirname(self.output_dir)
             if not os.path.isdir(top_output_dir):
@@ -103,11 +104,13 @@ def escape_cmd(cmd):
 
 def main():
     """Main function with argument parsing."""
-    parser = argparse.ArgumentParser(description="Generate picture gallery using fgallery "
-                                                 "(configured by YAML file).")
+    parser = argparse.ArgumentParser(
+        description="Generate picture gallery using fgallery (configured by YAML file)."
+    )
     parser.add_argument("-c", "--config", required=True, help="YAML configuration file")
-    parser.add_argument("-n", "--dry_run", action="store_true",
-                        help="just pretent, but do not remove any files")
+    parser.add_argument(
+        "-n", "--dry_run", action="store_true", help="just pretent, but do not remove any files"
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="print more logging output")
     args = parser.parse_args()
     logging.basicConfig(format=LOG_FORMAT, level=logging.INFO if args.verbose else logging.WARNING)
