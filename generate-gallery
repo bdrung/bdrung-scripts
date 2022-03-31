@@ -119,7 +119,7 @@ def main():
             return 1
 
     with open(args.config) as config_file:
-        config = yaml.load(config_file)
+        config = yaml.load(config_file, Loader=yaml.SafeLoader)
 
     for directory in ("output_dir", "temp_dir"):
         if not os.path.isabs(config[directory]):
