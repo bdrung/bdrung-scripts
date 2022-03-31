@@ -152,7 +152,9 @@ def main():
     for directory in args.directory:
         images = [os.path.join(directory, f) for f in os.listdir(directory)]
     random.shuffle(images)
-    template = jinja2.Template(BACKGROUND_TEMPLATE)
+
+    environment = jinja2.Environment(keep_trailing_newline=True)
+    template = environment.from_string(BACKGROUND_TEMPLATE)
     output = template.render(
         duration=args.duration,
         images=images,
@@ -167,7 +169,7 @@ def main():
     full_duration = len(images) * args.duration + (len(images) - 1) * args.transition_duration
     logger.info("A full duration takes %s.", duration_str(full_duration))
 
-    template = jinja2.Template(WALLPAPER_TEMPLATE)
+    template = environment.from_string(WALLPAPER_TEMPLATE)
     relative_background_filename = os.path.relpath(background_filename, os.path.expanduser("~"))
     output = template.render(name=args.name, background_filename=relative_background_filename)
     wallpaper_filename = os.path.join(WALLPAPER_DIRECTORY, args.filename + ".xml")
