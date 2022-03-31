@@ -38,8 +38,8 @@ import re
 
 import jinja2
 
-BACKGROUND_DIRECTORY = "~/.local/share/backgrounds"
-WALLPAPER_DIRECTORY = "~/.local/share/gnome-background-properties"
+BACKGROUND_DIRECTORY = os.path.expanduser("~/.local/share/backgrounds")
+WALLPAPER_DIRECTORY = os.path.expanduser("~/.local/share/gnome-background-properties")
 LOG_FORMAT = "%(levelname)s: %(message)s"
 
 BACKGROUND_TEMPLATE = """\
@@ -160,9 +160,7 @@ def main():
         transition_duration=args.transition_duration,
         year=datetime.datetime.today().year,
     )
-    background_filename = os.path.expanduser(
-        os.path.join(BACKGROUND_DIRECTORY, args.filename + ".xml")
-    )
+    background_filename = os.path.join(BACKGROUND_DIRECTORY, args.filename + ".xml")
     with open(background_filename, "w") as background_file:
         background_file.write(output)
     logger.info("Created background file '%s'.", background_filename)
@@ -172,9 +170,7 @@ def main():
     template = jinja2.Template(WALLPAPER_TEMPLATE)
     relative_background_filename = os.path.relpath(background_filename, os.path.expanduser("~"))
     output = template.render(name=args.name, background_filename=relative_background_filename)
-    wallpaper_filename = os.path.expanduser(
-        os.path.join(WALLPAPER_DIRECTORY, args.filename + ".xml")
-    )
+    wallpaper_filename = os.path.join(WALLPAPER_DIRECTORY, args.filename + ".xml")
     with open(wallpaper_filename, "w") as wallpaper_file:
         wallpaper_file.write(output)
     logger.info("Created wallpaper file '%s'.", wallpaper_filename)
