@@ -152,6 +152,7 @@ def main():
     for directory in args.directory:
         images = [os.path.join(directory, f) for f in os.listdir(directory)]
     random.shuffle(images)
+    logger.info("Found %i images.", len(images))
 
     environment = jinja2.Environment(keep_trailing_newline=True)
     template = environment.from_string(BACKGROUND_TEMPLATE)
