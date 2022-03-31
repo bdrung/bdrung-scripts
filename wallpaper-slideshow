@@ -150,7 +150,7 @@ def main():
 
     images = []
     for directory in args.directory:
-        images = [os.path.join(directory, f) for f in os.listdir(directory)]
+        images += [os.path.join(directory, f) for f in os.listdir(directory)]
     random.shuffle(images)
     logger.info("Found %i images.", len(images))
 
