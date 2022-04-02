@@ -1,0 +1,45 @@
+#!/usr/bin/python3
+
+# Copyright 2022 Benjamin Drung <bdrung@posteo.de>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name
+
+"""Copy the modification time from one file to another."""
+
+import argparse
+import logging
+import os
+import sys
+
+LOG_FORMAT = "%(name)s %(levelname)s: %(message)s"
+__script_name__ = os.path.basename(sys.argv[0]) if __name__ == "__main__" else __name__
+
+
+def main(args):
+    """Main function with argument parsing."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("source", help="File to take the mtime from")
+    parser.add_argument("target", help="File to change the mtime")
+    args = parser.parse_args(args)
+    logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
+
+    mtime = os.path.getmtime(args.source)
+    os.utime(args.target, (mtime, mtime))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))  # pragma: no cover

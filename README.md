@@ -4,6 +4,17 @@ Various personal scripts
 This repository contains various small personal scripts that have no other place to live. Feel free
 to grub through the list.
 
+copy-mtime
+----------
+
+Copy the modification time from one file to another.
+
+Example call:
+
+```
+copy-mtime source_file target_file
+```
+
 generate-gallery
 ----------------
 
