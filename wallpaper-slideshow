@@ -88,14 +88,14 @@ WALLPAPER_TEMPLATE = """\
 def duration_str(duration):
     """Return duration in the biggest useful time unit (years, days, hours, minutes, seconds)."""
     if duration < 60:
-        return "%i seconds" % (duration)
+        return f"{duration} seconds"
     if duration < 3600:
-        return "%.2f minutes (= %i s)" % (duration / 60, duration)
+        return f"{duration / 60:.2f} minutes (= {duration} s)"
     if duration < 86400:
-        return "%.2f hours (= %i s)" % (duration / 3600, duration)
+        return f"{duration / 3600:.2f} hours (= {duration} s)"
     if duration < 31536000:
-        return "%.2f days (= %.2f h = %i s)" % (duration / 86400, duration / 3600, duration)
-    return "%.2f years (= %i s)" % (duration / 31536000, duration)
+        return f"{duration / 86400:.2f} days (= {duration / 3600:.2f} h = {duration} s)"
+    return f"{duration / 31536000:.2f} years (= {duration} s)"
 
 
 def main():
@@ -111,8 +111,8 @@ def main():
         "-f",
         "--filename",
         help=(
-            "Filename for background file in %s and wallpaper file in %s "
-            "(default: derive from given name)" % (BACKGROUND_DIRECTORY, WALLPAPER_DIRECTORY)
+            f"Filename for background file in {BACKGROUND_DIRECTORY} and wallpaper file "
+            f"in {WALLPAPER_DIRECTORY} (default: derive from given name)"
         ),
     )
     parser.add_argument(
@@ -144,8 +144,8 @@ def main():
         args.filename = re.sub(" ", "_", args.name)
     if not re.match(r"^\w+$", args.filename):
         parser.error(
-            "Invalid filename '%s'. It must only contain alphanumeric character "
-            "and the underscore. Please specify one with --filename." % (args.filename)
+            f"Invalid filename '{args.filename}'. It must only contain alphanumeric character "
+            f"and the underscore. Please specify one with --filename."
         )
 
     images = []
