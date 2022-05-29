@@ -34,6 +34,19 @@ Running `generate-gallery -c example.yaml` would create `fgallery/example_galler
 pictures from `pictures/2019/example/*.jpg`. The paths can be absolute or relative to the
 configuration file.
 
+git-archive
+-----------
+
+Generate a Debian source package from a git repository using `git archive`.
+The script reads `debian/changelog` to determine the source package name and
+upstream version. It will write the Debian source package to
+`../${source}_${upstream_version}.orig.tar.xz`. The script takes one parameter
+to specify which tree-ish should be archived (defaults to `HEAD`). Example call:
+
+```
+git-archive main
+```
+
 wallpaper-slideshow
 -------------------
 
