@@ -164,7 +164,7 @@ def main():
         year=datetime.datetime.today().year,
     )
     background_filename = os.path.join(BACKGROUND_DIRECTORY, args.filename + ".xml")
-    with open(background_filename, "w") as background_file:
+    with open(background_filename, "w", encoding="utf-8") as background_file:
         background_file.write(output)
     logger.info("Created background file '%s'.", background_filename)
     full_duration = len(images) * args.duration + (len(images) - 1) * args.transition_duration
@@ -174,7 +174,7 @@ def main():
     relative_background_filename = os.path.relpath(background_filename, os.path.expanduser("~"))
     output = template.render(name=args.name, background_filename=relative_background_filename)
     wallpaper_filename = os.path.join(WALLPAPER_DIRECTORY, args.filename + ".xml")
-    with open(wallpaper_filename, "w") as wallpaper_file:
+    with open(wallpaper_filename, "w", encoding="utf-8") as wallpaper_file:
         wallpaper_file.write(output)
     logger.info("Created wallpaper file '%s'.", wallpaper_filename)
 
