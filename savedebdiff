@@ -1,0 +1,99 @@
+#!/usr/bin/python3
+
+# Copyright (C) 2022, Benjamin Drung <bdrung@ubuntu.com>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+# REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+# AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+# INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+# LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+
+"""Save the debdiff output as <source>_<version>.debdiff."""
+
+import argparse
+import logging
+import os
+import re
+import subprocess
+import sys
+
+import unidiff
+
+LOG_FORMAT = "%(name)s %(levelname)s: %(message)s"
+__script_name__ = os.path.basename(sys.argv[0]) if __name__ == "__main__" else __name__
+
+
+def find_debian_changelog(debdiff: unidiff.PatchSet) -> unidiff.PatchedFile:
+    """Find debian/changelog in given debdiff."""
+    for modified_file in debdiff.added_files + debdiff.modified_files:
+        if modified_file.path.endswith("debian/changelog"):
+            return modified_file
+    raise Exception("No debian/changelog found in debdiff.")
+
+
+def derive_filename_from_debdiff(debdiff: unidiff.PatchSet) -> str:
+    """Extract source and version from debian/changelog change."""
+    debian_changelog = find_debian_changelog(debdiff)
+    hunk = debian_changelog[0]
+    match = re.search(
+        r"^[+ ]([a-z0-9+.-]+) \(([A-Za-z0-9.+~-]+)\) ", str(hunk), flags=re.MULTILINE
+    )
+    if match:
+        source = match.group(1)
+        version = match.group(2)
+        return f"{source}_{version}.debdiff"
+    raise Exception(f"Failed to extract source and version from debian/changelog diff:\n{hunk}")
+
+
+def save_debdiff(filename: str, debdiff: str, force: bool) -> None:
+    """Save given debdiff."""
+    logger = logging.getLogger(__script_name__)
+    if os.path.exists(filename) and not force:
+        with open(filename, "r", encoding="utf-8") as debdiff_file:
+            old_debdiff = debdiff_file.read()
+        if debdiff == old_debdiff:
+            logger.info("%s is already stored.", filename)
+            return
+        logger.error("%s exists and differs. Use --force to overwrite.", filename)
+        sys.exit(1)
+
+    with open(filename, "w", encoding="utf-8") as debdiff_file:
+        debdiff_file.write(debdiff)
+    logger.info("Wrote debdiff to %s", filename)
+
+
+def main(argv: list[str]) -> None:
+    """Save the debdiff output as <source>_<version>.debdiff."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-d", "--directory", help="Output directory for debdiff (default: current directory)"
+    )
+    parser.add_argument("--force", action="store_true", help="Overwrite existing debdiff file.")
+    parser.add_argument(
+        "-o", "--open", action="store_true", help="Open debdiff afterwards with xdg-open"
+    )
+    args = parser.parse_args(argv)
+    logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
+    logger = logging.getLogger(__script_name__)
+
+    debdiff = sys.stdin.read()
+    if not debdiff:
+        logger.error("No debdiff provided to stdin.")
+        sys.exit(1)
+
+    filename = derive_filename_from_debdiff(unidiff.PatchSet(debdiff))
+    if args.directory:
+        filename = os.path.join(args.directory, filename)
+    save_debdiff(filename, debdiff, args.force)
+    if args.open:
+        subprocess.call(["xdg-open", filename])
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])  # pragma: no cover

@@ -47,6 +47,18 @@ to specify which tree-ish should be archived (defaults to `HEAD`). Example call:
 git-archive main
 ```
 
+savedebdiff
+-----------
+
+Save the debdiff output as `<source>_<version>.debdiff`. Pipe the debdiff output
+to `savedebdiff`. The diff must contain new `debian/changelog` entry.
+
+Example call:
+
+```
+debdiff --auto-ver-sort libevent_*.dsc | savediff --open
+```
+
 wallpaper-slideshow
 -------------------
 
