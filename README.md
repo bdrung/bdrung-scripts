@@ -59,6 +59,32 @@ Example call:
 debdiff --auto-ver-sort libevent_*.dsc | savediff --open
 ```
 
+userlint
+--------
+
+Check git authors and commits for correct names and email addresses.
+
+Example call:
+
+```
+userlint
+```
+
+Example successful output:
+
+```
+userlint INFO: Checked 25 commits, found 2 valid and no invalid entries.
+```
+
+Example for an invalid email address:
+
+```
+userlint WARNING: Checked 2 commits, found 1 valid and 1 invalid entries:
+Benjamin Drung <bdrung@localhost>
+userlint INFO: Suggested mailmap:
+Benjamin Drung <bdrung@ubuntu.com> Benjamin Drung <bdrung@localhost>
+```
+
 wallpaper-slideshow
 -------------------
 

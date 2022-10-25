@@ -5,6 +5,9 @@ on:  # yamllint disable-line rule:truthy
   - push
   - pull_request
 
+env:
+  DEBIAN_FRONTEND: noninteractive
+
 jobs:
   unittest:
     runs-on: ubuntu-latest
@@ -25,9 +28,9 @@ jobs:
         run: >
           apt-get update &&
           apt-get install --no-install-recommends --yes
-          black isort pylint python3 python3-flake8 python3-jinja2
-          python3-pytest python3-pytest-cov python3-unidiff python3-yaml
-          shellcheck
+          black git isort pylint python3 python3-flake8 python3-jinja2
+          python3-publicsuffix2 python3-pygit2 python3-pytest python3-pytest-cov
+          python3-unidiff python3-yaml shellcheck
       - name: Run unit tests
         run: python3 -m pytest -ra --cov=. --cov-report=xml tests/
       - name: Install dependencies for Codecov

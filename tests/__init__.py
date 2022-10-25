@@ -21,7 +21,7 @@ import unittest
 
 def get_source_files():
     """Return a list of sources files/directories (to check with flake8/pylint)."""
-    scripts = ["copy-mtime", "generate-gallery", "savedebdiff", "wallpaper-slideshow"]
+    scripts = ["copy-mtime", "generate-gallery", "savedebdiff", "userlint", "wallpaper-slideshow"]
     modules = ["tests"]
     py_files = []
 
