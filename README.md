@@ -4,6 +4,29 @@ Various personal scripts
 This repository contains various small personal scripts that have no other place to live. Feel free
 to grub through the list.
 
+bzr2git
+-------
+
+Convert a bzr repository to git. It takes a bzr clone URL or a local bzr
+repository and a git remote URL. The converted git repository is checked to have
+the same content and that the author/committer names and emails are correct
+(using `userlint`).
+
+Example call:
+
+```sh
+bzr2git lp:jasper-initramfs git+ssh://git.launchpad.net/~ubuntu-dev/jasper-initramfs/+git/main
+```
+
+In case the author/committer names and emails needs to be corrected:
+
+```sh
+cat > whoopsie.mailmap <<EOF
+Evan Dandrea <evan.dandrea@canonical.com> Tarmac <>
+EOF
+bzr2git -m whoopsie.mailmap lp:whoopsie git+ssh://git.launchpad.net/~ubuntu-core-dev/whoopsie/+git/main
+```
+
 copy-mtime
 ----------
 

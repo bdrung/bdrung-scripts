@@ -1,0 +1,133 @@
+#!/bin/bash
+set -eu
+
+usage() {
+    cat >&2 <<EOF
+${0##*/} [-c|--commit-callback <body or filename>] [--force] [-h|--help]
+        [-m|--mailmap <mailmap>] [-n|--name <bzr-repo-name>] [--push]
+        <bzr-repository> <git-repository>
+
+Convert a bzr repository to git. The converted git repository is checked to have
+the same content and that the author/committer names and emails are correct
+(using userlint).
+
+<bzr-repository> can be a clone URL or a local checkout
+<git-repository> is a git remote URL to be configured a origin
+    -c|--commit-callback <body or filename>
+                 Python code for processing commit objects in git-filter-repo
+    --force      Overwrite target git repository if it already exists.
+    -m|--mailmap <mailmap>
+                 mailmap file to rewriting author/committer names and emails
+    -n|--name <bzr-repo-name>
+                 Directory name to use for bzr clone
+    --push       Push main branch of converted git repository to remote
+EOF
+}
+
+while test $# -gt 0; do
+    case $1 in
+        --commit-callback|-c)
+            shift
+            commit_callback="$1"
+            if test -e "$commit_callback"; then
+                commit_callback=$(realpath "$commit_callback")
+            fi
+            git_filter_repo_args+=(--commit-callback "$commit_callback")
+            ;;
+        --force)
+            force=1
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        --mailmap|-m)
+            shift
+            mailmap="$(realpath --relative-to=. "$1")"
+            git_filter_repo_args+=(--mailmap "../${mailmap}")
+            ;;
+        --name|-n)
+            shift
+            name="$1"
+            ;;
+        --push)
+            push=1
+            ;;
+        *)
+            if test -z "${bzr_repository-}"; then
+                bzr_repository=$1
+            elif test -z "${git_repository-}"; then
+                git_repository=$1
+            else
+                echo "${0##*/}: Unknown argument '$1'"
+                exit 1
+            fi
+            ;;
+    esac
+    shift
+done
+if test -z "${git_repository-}"; then
+    echo "${0##*/}: Target git repository not specified." >&2
+    exit 1
+fi
+if test -z "${bzr_repository-}"; then
+    echo "${0##*/}: Source bzr and target git repository not specified." >&2
+    exit 1
+fi
+
+for binary in brz git git-filter-repo userlint; do
+    if ! which "$binary" >/dev/null; then
+        echo "${0##*/}: Required command '$binary' not found. Please install it." >&2
+        exit 1
+    fi
+done
+
+if test -d "${bzr_repository}"; then
+    bzr_directory=$(realpath --relative-to=. "$bzr_repository")
+else
+    if test -n "${name-}"; then
+        bzr_directory="$name"
+    else
+        bzr_directory=$(basename "$bzr_repository" | sed 's/^lp://')
+    fi
+    if test -d "${bzr_directory}"; then
+        cd "$bzr_directory"
+        brz pull
+        cd ..
+    else
+        brz branch "${bzr_repository}" "${bzr_directory}"
+    fi
+fi
+
+git_directory="${bzr_directory}.git"
+if test -e "${git_directory}"; then
+    if test -n "${force-}"; then
+        rm -rf "$git_directory"
+    else
+        echo "${0##*/}: ${git_directory} already exists! Use --force to overwrite." >&2
+        exit 0
+    fi
+fi
+mkdir "${git_directory}"
+
+cd "${git_directory}"
+git init --initial-branch=master
+brz fast-export --plain "../${bzr_directory}" | git fast-import
+git reset --hard
+git branch -m master main
+git-filter-repo --force --replace-refs=delete-no-add "${git_filter_repo_args[@]}"
+cd ..
+
+# Check resulting git repository
+diff -pruN --no-dereference -x '.bzr' -x '.git' "${bzr_directory}" "${git_directory}"
+userlint -d "${git_directory}"
+
+cd "${git_directory}"
+git remote add origin "$git_repository"
+if git fetch origin; then
+    git branch --set-upstream-to=origin/main
+    git fetch origin --tags
+fi
+if test -n "${push-}"; then
+    git push --set-upstream origin main
+fi

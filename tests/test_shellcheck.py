@@ -20,7 +20,7 @@ import unittest
 
 from tests import unittest_verbosity
 
-SHELL_SCRIPTS = ["git-archive", "webcam-capture"]
+SHELL_SCRIPTS = ["bzr2git", "git-archive", "webcam-capture"]
 
 
 def run_shellcheck(shell_scripts: list[str], verbose: bool) -> str:
