@@ -130,4 +130,5 @@ if git fetch origin; then
 fi
 if test -n "${push-}"; then
     git push --set-upstream origin main
+    git push origin --tags
 fi
