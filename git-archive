@@ -27,6 +27,10 @@ fi
 source=$(dpkg-parsechangelog -S Source)
 version=$(dpkg-parsechangelog -S Version)
 upstream_version=$(echo "$version" | sed "s/-[^-]\+$//")
+tarball_name="../${source}_${upstream_version}.orig.tar.xz"
 
-echo "I: git archive --format=tar --prefix=${source}-${upstream_version}/ $TREE_ISH | xz -c -9 > ../${source}_${upstream_version}.orig.tar.xz"
-git archive --format=tar --prefix="${source}-${upstream_version}/" "$TREE_ISH" | xz -c -9 > "../${source}_${upstream_version}.orig.tar.xz"
+echo "I: git archive --format=tar --prefix=${source}-${upstream_version}/ $TREE_ISH | xz -c -9 > ${tarball_name}"
+git archive --format=tar --prefix="${source}-${upstream_version}/" "$TREE_ISH" | xz -c -9 > "${tarball_name}"
+
+echo "I: gpg --output ${tarball_name}.asc --armor --detach-sign ${tarball_name}"
+gpg --output "${tarball_name}.asc" --armor --detach-sign "${tarball_name}"
