@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -eu
 
 # Copyright 2022 Benjamin Drung <bdrung@posteo.de>
@@ -26,11 +26,17 @@ fi
 
 source=$(dpkg-parsechangelog -S Source)
 version=$(dpkg-parsechangelog -S Version)
+# shellcheck disable=SC2001
 upstream_version=$(echo "$version" | sed "s/-[^-]\+$//")
 tarball_name="../${source}_${upstream_version}.orig.tar.xz"
 
-echo "I: git archive --format=tar --prefix=${source}-${upstream_version}/ $TREE_ISH | xz -c -9 > ${tarball_name}"
-git archive --format=tar --prefix="${source}-${upstream_version}/" "$TREE_ISH" | xz -c -9 > "${tarball_name}"
+if grep -q "^3.0 (quilt)$" debian/source/format 2>/dev/null; then
+    # Exclude debian directory when using 3.0 (quilt) source format.
+    git_archive_args=(. ':!debian/')
+fi
+
+echo "I: git archive --format=tar --prefix=${source}-${upstream_version}/ $TREE_ISH ${git_archive_args[*]} | xz -c -9 > ${tarball_name}"
+git archive --format=tar --prefix="${source}-${upstream_version}/" "$TREE_ISH" "${git_archive_args[@]}" | xz -c -9 > "${tarball_name}"
 
 echo "I: gpg --output ${tarball_name}.asc --armor --detach-sign --yes ${tarball_name}"
 gpg --output "${tarball_name}.asc" --armor --detach-sign --yes "${tarball_name}"
