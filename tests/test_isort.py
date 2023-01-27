@@ -28,7 +28,7 @@ class IsortTestCase(unittest.TestCase):
     is provided by the get_source_files() function.
     """
 
-    def test_isort(self):
+    def test_isort(self) -> None:
         """Test: Run isort on Python source code."""
 
         cmd = ["isort", "--check-only", "--diff"] + get_source_files()

@@ -28,7 +28,7 @@ class BlackTestCase(unittest.TestCase):
     source files is provided by the get_source_files() function.
     """
 
-    def test_black(self):
+    def test_black(self) -> None:
         """Test: Run black code formatter on Python source code."""
 
         cmd = ["black", "--check", "--diff"] + get_source_files()
