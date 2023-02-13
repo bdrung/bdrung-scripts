@@ -51,6 +51,26 @@ diff -Nru libevent-2.1.12-stable/debian/control libevent-2.1.12-stable/debian/co
  Priority: optional
  Build-Depends: debhelper-compat (= 13),
 """
+UPDATE_MANAGER_DEBDIFF = """\
+diff -Nru update-manager-22.10.7/debian/changelog update-manager-23.04.1/debian/changelog
+--- update-manager-22.10.7/debian/changelog	2023-02-02 04:07:52.000000000 +0100
++++ update-manager-23.04.1/debian/changelog	2023-02-13 14:17:03.000000000 +0100
+@@ -1,3 +1,14 @@
++update-manager (1:23.04.1) lunar; urgency=medium
++
++  * Make Python version PEP440 compliant (LP: #1991606)
++  * Switch to Debian source 3.0 (native)
++  * Replace transitional policykit-1 by polkitd and pkexec
++  * Fix pycodestyle complains by formatting Python code with black
++  * Drop imports only needed for Python 2
++  * Replace lsb_release call with reading /etc/os-release directly
++
++ -- Benjamin Drung <bdrung@ubuntu.com>  Mon, 13 Feb 2023 14:17:03 +0100
++
+ update-manager (1:22.10.7) lunar; urgency=medium
+ [trailing space protection]
+   * Use uaclient library instead of ua tool for Ubuntu Pro information.
+"""
 
 
 class TestSavedebdiff(unittest.TestCase):
@@ -62,6 +82,10 @@ class TestSavedebdiff(unittest.TestCase):
     def test_derive_filename_from_debdiff(self):
         filename = derive_filename_from_debdiff(unidiff.PatchSet(LIBEVENT_DEBDIFF))
         self.assertEqual(filename, "libevent_2.1.12-stable-5ubuntu1.debdiff")
+
+    def test_derive_filename_from_debdiff_with_epoch(self):
+        filename = derive_filename_from_debdiff(unidiff.PatchSet(UPDATE_MANAGER_DEBDIFF))
+        self.assertEqual(filename, "update-manager_23.04.1.debdiff")
 
     def test_debian_changelog_not_found(self):
         empty = unidiff.PatchSet("")

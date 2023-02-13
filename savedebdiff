@@ -42,7 +42,7 @@ def derive_filename_from_debdiff(debdiff: unidiff.PatchSet) -> str:
     debian_changelog = find_debian_changelog(debdiff)
     hunk = debian_changelog[0]
     match = re.search(
-        r"^[+ ]([a-z0-9+.-]+) \(([A-Za-z0-9.+~-]+)\) ", str(hunk), flags=re.MULTILINE
+        r"^[+ ]([a-z0-9+.-]+) \((?:[0-9]+:)?([A-Za-z0-9.+~-]+)\) ", str(hunk), flags=re.MULTILINE
     )
     if match:
         source = match.group(1)
