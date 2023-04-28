@@ -22,7 +22,12 @@ import unittest.mock
 
 import unidiff
 
-from .scripts.savedebdiff import derive_filename_from_debdiff, main, save_debdiff
+from .scripts.savedebdiff import (
+    ChangelogNotFoundError,
+    derive_filename_from_debdiff,
+    main,
+    save_debdiff,
+)
 
 LIBEVENT_DEBDIFF = """\
 diff -Nru libevent-2.1.12-stable/debian/changelog libevent-2.1.12-stable/debian/changelog
@@ -89,9 +94,7 @@ class TestSavedebdiff(unittest.TestCase):
 
     def test_debian_changelog_not_found(self):
         empty = unidiff.PatchSet("")
-        self.assertRaisesRegex(
-            Exception, "No debian/changelog found", derive_filename_from_debdiff, empty
-        )
+        self.assertRaises(ChangelogNotFoundError, derive_filename_from_debdiff, empty)
 
     @unittest.mock.patch("sys.stdin")
     def test_main(self, stdin_mock):
