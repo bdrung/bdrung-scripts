@@ -29,12 +29,16 @@ LOG_FORMAT = "%(name)s %(levelname)s: %(message)s"
 __script_name__ = os.path.basename(sys.argv[0]) if __name__ == "__main__" else __name__
 
 
+class ChangelogNotFoundError(Exception):
+    """debian/changelog not found."""
+
+
 def find_debian_changelog(debdiff: unidiff.PatchSet) -> unidiff.PatchedFile:
     """Find debian/changelog in given debdiff."""
     for modified_file in debdiff.added_files + debdiff.modified_files:
         if modified_file.path.endswith("debian/changelog"):
             return modified_file
-    raise Exception("No debian/changelog found in debdiff.")
+    raise ChangelogNotFoundError("No debian/changelog found in debdiff.")
 
 
 def derive_filename_from_debdiff(debdiff: unidiff.PatchSet) -> str:
@@ -48,7 +52,7 @@ def derive_filename_from_debdiff(debdiff: unidiff.PatchSet) -> str:
         source = match.group(1)
         version = match.group(2)
         return f"{source}_{version}.debdiff"
-    raise Exception(f"Failed to extract source and version from debian/changelog diff:\n{hunk}")
+    raise ValueError(f"Failed to extract source and version from debian/changelog diff:\n{hunk}")
 
 
 def save_debdiff(filename: str, debdiff: str, force: bool) -> None:
