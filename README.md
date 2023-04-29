@@ -113,6 +113,26 @@ Example call:
 debdiff --auto-ver-sort libevent_*.dsc | savediff --open
 ```
 
+schroot-wrapper
+---------------
+
+Wrap the `schroot` command to prepare the chroot before running. Start a schroot session, prepare
+the chroot (controlled by the script's parameters), run the session, and end the session
+afterwards. The preparation includes enabling the Ubuntu proposed pocket, installing packages (from
+the archive or local `.deb` files that are copied into the chroot).
+
+Example call to install `tzdata` from `-proposed` (to test a stable release update):
+
+```
+schroot-wrapper --enable-proposed -c jammy -p tzdata
+```
+
+Example call to install a locally built package in the chroot:
+
+```
+schroot-wrapper -c lunar -p ../tzdata_2022g-1ubuntu1_all.deb
+```
+
 userlint
 --------
 

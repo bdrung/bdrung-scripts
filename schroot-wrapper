@@ -1,0 +1,218 @@
+#!/usr/bin/python3
+
+# Copyright (C) 2022, Benjamin Drung <bdrung@ubuntu.com>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+# REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+# AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+# INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+# LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name
+
+"""Wrap schroot command to prepare chroot before running."""
+
+import argparse
+import getpass
+import logging
+import os
+import pathlib
+import platform
+import re
+import subprocess
+import sys
+import typing
+
+LOG_FORMAT = "%(name)s %(levelname)s: %(message)s"
+__script_name__ = os.path.basename(sys.argv[0]) if __name__ == "__main__" else __name__
+
+
+class SchrootSession:
+    """Context manager to hold a schroot session."""
+
+    def __init__(self, chroot: str):
+        self.chroot = chroot
+        self.session = None
+        self.apt_updated = False
+        self.logger = logging.getLogger(__script_name__)
+
+    def __enter__(self):
+        process = subprocess.run(
+            ["schroot", "-c", self.chroot, "-b"],
+            check=True,
+            encoding="utf-8",
+            stdout=subprocess.PIPE,
+        )
+        self.session = process.stdout.strip()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.session:
+            subprocess.run(["schroot", "-c", self.session, "-e"], check=True)
+            self.session = None
+
+    def run(
+        self,
+        directory: typing.Optional[str] = None,
+        user: typing.Optional[str] = None,
+        cmd: typing.Optional[list[str]] = None,
+        check: bool = True,
+        encoding: typing.Optional[str] = None,
+        stdin: typing.Optional[typing.IO] = None,
+        stdout: typing.Optional[int] = None,
+    ) -> subprocess.CompletedProcess:
+        # pylint: disable=too-many-arguments
+        """Run schroot session."""
+        assert self.session is not None
+        schroot_cmd = ["schroot", "-c", self.session]
+        if directory:
+            schroot_cmd += ["-d", directory]
+        if user:
+            schroot_cmd += ["-u", user]
+        schroot_cmd.append("-r")
+        if cmd:
+            schroot_cmd.append("--")
+            schroot_cmd += cmd
+        self.logger.info("Running: %s", " ".join(schroot_cmd))
+        return subprocess.run(
+            schroot_cmd, check=check, encoding=encoding, stdin=stdin, stdout=stdout
+        )
+
+    def get_home_directory(self, user: str) -> str:
+        """Return the home directory path of the user in the chroot."""
+        process = self.run(
+            "/",
+            "root",
+            ["sh", "-c", f"realpath ~{user}"],
+            encoding="utf-8",
+            stdout=subprocess.PIPE,
+        )
+        return process.stdout.strip()
+
+    def create_directory(self, directory: str, owner: str) -> None:
+        """Create the directory in the chroot."""
+        self.run("/", "root", ["install", "-d", "-o", owner, directory])
+
+    def check_directory(self, directory: str) -> bool:
+        """Check if the directory exists in the chroot."""
+        return self.run("/", "root", ["test", "-d", directory], check=False).returncode == 0
+
+    def enable_proposed(self, uris: list[str], components: list[str]):
+        """Enable -proposed pocket."""
+        sources = (
+            f"Types: deb\n"
+            f"URIs: {' '.join(uris)}\n"
+            f"Suites: {self.chroot}-proposed\n"
+            f"Components: {' '.join(components)}\n"
+        )
+        cmd = ["sh", "-c", f"printf '{sources}' > /etc/apt/sources.list.d/ubuntu-proposed.sources"]
+        self.run("/", "root", cmd)
+        self.apt_update(force_refresh=True)
+
+    def apt_update(self, force_refresh: bool = False):
+        """Run apt-get update if not already updated."""
+        if not self.apt_updated or force_refresh:
+            self.run("/", "root", ["apt-get", "update"])
+        self.apt_updated = True
+
+    def _copy_package_into_chroot(self, package: str) -> str:
+        deb_file = pathlib.Path(package)
+        if not deb_file.is_file():
+            return package
+        chroot_path = pathlib.Path("/root") / deb_file.name
+        with deb_file.open("rb") as input_file:
+            self.run(
+                "/", "root", ["tee", str(chroot_path)], stdin=input_file, stdout=subprocess.DEVNULL
+            )
+        return str(chroot_path)
+
+    def install_packages(self, packages: list[str]) -> None:
+        """Install given list of Debian packages (without recommends)."""
+        self.apt_update()
+        packages = [self._copy_package_into_chroot(package) for package in packages]
+        self.run("/", "root", ["apt-get", "install", "--no-install-recommends", "-y"] + packages)
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse command line arguments and return namespace."""
+    os_release = platform.freedesktop_os_release()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c",
+        "--chroot",
+        default=os_release["VERSION_CODENAME"],
+        help="Specify a chroot or active session to use. (default: use current distribution"
+        " codename '%(default)s')",
+    )
+    parser.add_argument(
+        "-d",
+        "--directory",
+        default=os.getcwd(),
+        help="Change to directory inside the chroot before running the command or login shell."
+        " Use the current directory if it exists in the chroot. Otherwise fall back to the user's"
+        " home directory (and create the directory if it is missing).",
+    )
+    parser.add_argument(
+        "-u",
+        "--user",
+        default=getpass.getuser(),
+        help="Run as a different user. The default is to run as %(default)s and fallback to root"
+        " if that user does not exist in the chroot.",
+    )
+    parser.add_argument(
+        "-p",
+        "--packages",
+        default=[],
+        action="append",
+        help="List of comma- or space-separated packages that should be installed"
+        " without recommends. Can be specified multiple times.",
+    )
+    parser.add_argument(
+        "-e", "--enable-proposed", action="store_true", help="Enable -proposed pocket."
+    )
+    parser.add_argument(
+        "--proposed-uri",
+        default="http://archive.ubuntu.com/ubuntu",
+        help="Sources list URI to use for -proposed (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--proposed-components",
+        default="main,universe",
+        help="List of comma- or space-separated components to use for -proposed"
+        " (default: %(default)s)",
+    )
+
+    args = parser.parse_args(argv)
+    args.packages = [p for packages in args.packages for p in re.split("[, ]", packages)]
+    args.proposed_components = re.split("[, ]", args.proposed_components)
+
+    return args
+
+
+def main(argv: list[str]) -> int:
+    """Wrap schroot command to prepare chroot before running."""
+    args = parse_args(argv)
+    logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
+
+    with SchrootSession(args.chroot) as session:
+        if not session.check_directory(args.directory):
+            args.directory = session.get_home_directory(args.user)
+            if not session.check_directory(args.directory):
+                session.create_directory(args.directory, args.user)
+
+        if args.enable_proposed:
+            session.enable_proposed([args.proposed_uri], args.proposed_components)
+        if args.packages:
+            session.install_packages(args.packages)
+        return session.run(args.directory, args.user, check=False).returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))  # pragma: no cover
