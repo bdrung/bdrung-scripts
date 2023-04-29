@@ -17,28 +17,11 @@
 import contextlib
 import io
 import os
-import re
-import subprocess
 import tempfile
 import unittest
 import unittest.mock
 
 from tests.test_shellcheck import run_shellcheck
-
-
-def get_shellcheck_version() -> list[int]:
-    """Return the shellcheck version."""
-    output = subprocess.check_output(["shellcheck", "--version"])
-    version_match = re.search("^version: ([0-9.]+)$", output.decode(), re.MULTILINE)
-    assert version_match is not None
-    return [int(x) for x in version_match.group(1).split(".")]
-
-
-def shellcheck_level(level):
-    """Return shellcheck level string (depending on shellcheck version)."""
-    if get_shellcheck_version() < [0, 8]:
-        return ""
-    return f" ({level})"
 
 
 class TestLinters(unittest.TestCase):
@@ -82,7 +65,7 @@ class TestLinters(unittest.TestCase):
 
 In {shell} line 2:
 echo $HOME
-     ^---^ SC2086{shellcheck_level('info')}: Double quote to prevent globbing and word splitting.
+     ^---^ SC2086 (info): Double quote to prevent globbing and word splitting.
 
 Did you mean:{' '}
 echo "$HOME"
