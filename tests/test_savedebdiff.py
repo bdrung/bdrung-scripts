@@ -56,6 +56,20 @@ diff -Nru libevent-2.1.12-stable/debian/control libevent-2.1.12-stable/debian/co
  Priority: optional
  Build-Depends: debhelper-compat (= 13),
 """
+MISSING_VERSION_DEBDIFF = """\
+diff -Nru apport-2.23.1-0ubuntu3.1/debian/changelog apport-2.23.1-0ubuntu3.2/debian/changelog
+--- apport-2.23.1-0ubuntu3.1/debian/changelog	2023-04-12 11:24:37.000000000 +0200
++++ apport-2.23.1-0ubuntu3.2/debian/changelog	2023-04-12 12:38:24.000000000 +0200
+@@ -3,8 +3,6 @@
+   * Let apport depend on recent python3-problem-report for recent bug fix
+   * SECURITY UPDATE: viewing an apport-cli crash with default pager could
+     escalate privilege (LP: #2016023)
+-    - d/p/refactor-Introduce-run_as_real_user.patch: Introduce
+-      run_as_real_user()
+     - d/p/fix-Only-open-browser-as-user-via-sudo-if-running-as-root.patch:
+       Only open browser as user (via sudo) if running as root
+     - d/p/Replace-sudo-by-dropping-privileges-ourselves.patch: Replace sudo by
+"""
 UPDATE_MANAGER_DEBDIFF = """\
 diff -Nru update-manager-22.10.7/debian/changelog update-manager-23.04.1/debian/changelog
 --- update-manager-22.10.7/debian/changelog	2023-02-02 04:07:52.000000000 +0100
@@ -87,6 +101,10 @@ class TestSavedebdiff(unittest.TestCase):
     def test_derive_filename_from_debdiff(self):
         filename = derive_filename_from_debdiff(unidiff.PatchSet(LIBEVENT_DEBDIFF))
         self.assertEqual(filename, "libevent_2.1.12-stable-5ubuntu1.debdiff")
+
+    def test_derive_filename_from_debdiff_missing_version(self):
+        missing_version = unidiff.PatchSet(MISSING_VERSION_DEBDIFF)
+        self.assertRaises(ValueError, derive_filename_from_debdiff, missing_version)
 
     def test_derive_filename_from_debdiff_with_epoch(self):
         filename = derive_filename_from_debdiff(unidiff.PatchSet(UPDATE_MANAGER_DEBDIFF))
