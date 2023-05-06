@@ -1,0 +1,198 @@
+#!/usr/bin/python3
+
+# Copyright (C) 2018, Benjamin Drung <bdrung@posteo.de>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+"""Remove auto-generated files from Sony Alpha 6500 from the inserted SD cards"""
+
+import argparse
+import glob
+import logging
+import os
+
+FILE_GLOBS = [
+    "AVF_INFO/AVIN*.INT",
+    "AVF_INFO/AVIN*.BNP",
+    "AVF_INFO/AVIN*.INP",
+    "AVF_INFO/PRV*.BIN",
+    "PRIVATE/AVCHD/BDMV/MOVIEOBJ.BDM",
+    "PRIVATE/AVCHD/BDMV/INDEX.BDM",
+    "PRIVATE/M4ROOT/THMBNL/*.JPG",
+    "PRIVATE/M4ROOT/MEDIAPRO.XML",
+    "PRIVATE/M4ROOT/STATUS.BIN",
+    "PRIVATE/SONY/SONYCARD.IND",
+    "System Volume Information/IndexerVolumeGuid",
+    "System Volume Information/WPSettings.dat",
+]
+
+
+class MountPoint(object):
+    # pylint: disable=too-many-instance-attributes
+    """Represent one mount point entry in /etc/fstab"""
+
+    def __init__(
+        self, fs_spec, mountpoint, type_, options="defaults", dump=0, passno=0
+    ):
+        # pylint: disable=too-many-arguments
+        self.fs_spec = fs_spec
+        self.mountpoint = mountpoint
+        self.type = type_
+        self.options = options
+        self.dump = int(dump)
+        self.passno = int(passno)
+        self.logger = logging.getLogger(__name__)
+
+    def __eq__(self, other):
+        return (
+            self.fs_spec == other.fs_spec
+            and self.mountpoint == other.mountpoint
+            and self.type == other.type
+            and self.options == other.options
+            and self.dump == other.dump
+            and self.passno == other.passno
+        )
+
+    def __lt__(self, other):
+        """Sort by mount point"""
+        return self.mountpoint < other.mountpoint
+
+    @staticmethod
+    def from_fstab_line(line):
+        """Return a MountPoint object from one given line of /proc/mount"""
+        elements = line.split(" ")
+        return MountPoint(*elements[0:4], dump=elements[4], passno=elements[5])
+
+    @staticmethod
+    def get_by_fs_spec(fs_spec):
+        """Get mount point from the given fs spec. Returns None if not found."""
+        mountpoints = [m for m in get_physical_mount_points() if m.fs_spec == fs_spec]
+        return mountpoints[-1] if mountpoints else None
+
+    @staticmethod
+    def get_by_path(path):
+        """Get mount point from the given path. Returns None if not found."""
+        mountpoints = [m for m in get_physical_mount_points() if m.mountpoint == path]
+        return mountpoints[-1] if mountpoints else None
+
+    def is_sdcard(self):
+        """Check if the mount point is FAT32 or exFAT formatted"""
+        return self.type in ("exfat", "vfat", "fuseblk")
+
+    def is_mounted(self, chroot=None):
+        """Check wether the partition is mounted or not"""
+        mountpoints = [
+            m for m in get_physical_mount_points(chroot) if m.fs_spec == self.fs_spec
+        ]
+        return len(mountpoints) >= 1
+
+    def is_same_mount(self, other, chroot=""):
+        """Compare the given mount point with the other.
+
+        Return True if device and the mount directory are the same. The
+        filesystem type, options, dump, and passno are not considered.
+        Use __eq__ for a full comparison.
+
+        When chroot is specified, the mount directory of other needs to
+        start with the given chroot directory.
+        """
+        chroot_mountpoint = os.path.normpath(chroot + self.mountpoint)
+        if self.type == "bind":
+            reference_mount = MountPoint.get_by_path(self.fs_spec)
+            reference_mount.mountpoint = chroot_mountpoint
+            is_same = reference_mount == other
+        else:
+            is_same = (
+                self.fs_spec == other.fs_spec and chroot_mountpoint == other.mountpoint
+            )
+        return is_same
+
+    def sanitize(self):
+        """Sanitize the mount options, dump and pass"""
+        self.dump = 0
+        if self.mountpoint == "/":
+            self.options = "defaults,errors=remount-ro"
+            self.passno = 1
+        else:
+            self.options = "defaults"
+            self.passno = 2
+
+
+def get_physical_mount_points(directory=None):
+    """Get the mount points
+
+    /proc/mounts inside the chroot contains all mounts points for this
+    chroot in a format that is usable for /etc/fstab. Get this content
+    and drop all virtual mounts like proc and sysfs.
+
+    If directory is specified, return only the mount points that are
+    below the given directory.
+    """
+    mounts = open("/proc/mounts").read()
+    mount_points = [MountPoint.from_fstab_line(m) for m in mounts.strip().split("\n")]
+    if directory:
+        mount_points = [m for m in mount_points if m.mountpoint.startswith(directory)]
+    return mount_points
+
+
+def remove_empty_dir(path, subdirs_only):
+    """Recursively remove all empty directories
+
+    Walk the directory recursively bottom-up and remove all empty
+    directories. If 'subdirs_only' is specified, the given 'path'
+    is not removed, if it is empty (only the subdirectories are
+    removed if empty).
+    """
+    content = [os.path.join(path, x) for x in os.listdir(path)]
+    for file_or_dir in content:
+        if os.path.isdir(file_or_dir):
+            remove_empty_dir(file_or_dir, False)
+    if not subdirs_only and not os.listdir(path):
+        print("Removing empty directory '{}'...".format(path))
+        os.rmdir(path)
+
+
+def clean_sdcard(path):
+    print("Cleaning '{}'...".format(path))
+    files = []
+    for file_glob in FILE_GLOBS:
+        files += sorted(glob.glob(os.path.join(path, file_glob)))
+    for file_ in files:
+        print("Removing '{}'...".format(file_))
+        os.remove(file_)
+    remove_empty_dir(path, True)
+
+    remaining = sorted(os.listdir(path))
+    if remaining:
+        print("Remaining in '{}':\n * {}".format(path, "\n * ".join(remaining)))
+    else:
+        print("SDcard '{}' is empty now.".format(path))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--path", help="Path to SDcard to clean")
+    args = parser.parse_args()
+
+    if args.path:
+        clean_sdcard(args.path)
+    else:
+        mount_points = [
+            m for m in get_physical_mount_points(directory="/media") if m.is_sdcard()
+        ]
+        for mount_point in mount_points:
+            clean_sdcard(mount_point.mountpoint)
+
+
+if __name__ == "__main__":
+    main()

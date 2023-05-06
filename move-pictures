@@ -1,0 +1,198 @@
+#!/usr/bin/python3
+
+# Copyright (C) 2017, Benjamin Drung <bdrung@posteo.de>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name
+
+"""Move all pictures from the SD card to the pictures directory"""
+
+import argparse
+import functools
+import logging
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+import typing
+
+DIR_EXCLUDE_RE = re.compile("^.Trash-[0-9]+$")
+EXCLUDES = ["MEDIAPRO.XML"]
+LOG_FORMAT = "%(name)s: %(message)s"
+__script_name__ = os.path.basename(sys.argv[0]) if __name__ == "__main__" else __name__
+
+
+@functools.total_ordering
+class Picture:
+    """Represents a JPEG or raw picture file"""
+
+    def __init__(self, filename: str) -> None:
+        self.filename = filename
+        self._subdir: typing.Optional[str] = None
+        self.logger = logging.getLogger(__script_name__)
+
+    @property
+    def subdir(self) -> str:
+        """Determine subdirectory to group images by date"""
+        if self._subdir is None:
+            last_modification = os.path.getmtime(self.filename)
+            self._subdir = time.strftime("%Y/%Y-%m-%d", time.gmtime(last_modification))
+        return self._subdir
+
+    def copy(self, target: str, simulate: bool = False) -> None:
+        """Copy picture to given target directory (using a subdirectory)"""
+        name, ext = os.path.splitext(os.path.basename(self.filename))
+        target = os.path.join(target, self.subdir)
+        if not os.path.isdir(target):
+            self.logger.info("Creating directory '%s'...", target)
+            if not simulate:
+                os.makedirs(target)
+        target_filename = os.path.join(target, name + ext.lower())
+        if os.path.exists(target_filename):
+            self.logger.error(
+                "Error: %s already exists. Not copying %s.",
+                target_filename,
+                self.filename,
+            )
+        else:
+            self.logger.info("Copying %s -> %s", self.filename, target_filename)
+            if not simulate:
+                shutil.copy(self.filename, target_filename)
+
+    def move(self, target: str, simulate: bool = False) -> None:
+        """Move picture to given target directory (using a subdirectory)"""
+        name, ext = os.path.splitext(os.path.basename(self.filename))
+        target = os.path.join(target, self.subdir)
+        if not os.path.isdir(target):
+            self.logger.info("Creating directory '%s'...", target)
+            if not simulate:
+                os.makedirs(target)
+        target_filename = os.path.join(target, name + ext.lower())
+        if os.path.exists(target_filename):
+            self.logger.error(
+                "Error: %s already exists. Not copying %s.",
+                target_filename,
+                self.filename,
+            )
+        else:
+            self.logger.info("Moving %s -> %s", self.filename, target_filename)
+            if not simulate:
+                shutil.move(self.filename, target_filename)
+
+    def __str__(self) -> str:
+        return self.filename
+
+    def __eq__(self, other: object) -> bool:
+        assert isinstance(other, self.__class__)
+        return self.subdir == other.subdir and self.filename == other.filename
+
+    def __lt__(self, other: object) -> bool:
+        assert isinstance(other, self.__class__)
+        return (
+            self.subdir < other.subdir
+            or self.subdir == other.subdir
+            and self.filename < other.filename
+        )
+
+
+class MemoryCard:  # pylint: disable=too-few-public-methods
+    """Represents a mounted memory card."""
+
+    def __init__(self, mount_path: str) -> None:
+        self.mount_path = mount_path
+
+    def find_pictures(self) -> list[Picture]:
+        """
+        Find all pictures files on the memory card.
+        """
+        prog = re.compile(r"\.(arw|avi|jpg|mov|mpg|mp4|nef|wav|xml)$", re.IGNORECASE)
+        pictures = []
+        for root, dirnames, files in os.walk(self.mount_path):
+            pictures.extend(
+                [
+                    Picture(os.path.join(root, p))
+                    for p in files
+                    if prog.search(p) and p not in EXCLUDES
+                ]
+            )
+            dirnames[:] = [d for d in dirnames if not DIR_EXCLUDE_RE.search(d)]
+        return pictures
+
+
+def find_sdcards() -> list[MemoryCard]:
+    """
+    Search for mounted SD cards.
+
+    Currently it is quite simple: It checks /media/$username for mounted devices.
+    """
+    media_mount_path = os.path.join("/media", os.getlogin())
+    mounts = [os.path.join(media_mount_path, x) for x in os.listdir(media_mount_path)]
+    return [
+        MemoryCard(p)
+        for p in mounts
+        if (
+            os.path.isdir(os.path.join(p, "DCIM"))
+            or os.path.isdir(os.path.join(p, "PRIVATE"))
+        )
+    ]
+
+
+def main() -> None:
+    """Move all pictures from the SD card to the pictures directory"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-k",
+        "--keep",
+        action="store_true",
+        help="Copy pictures instead of moving them (i.e. keep the pictures"
+        " on the memory card)",
+    )
+    parser.add_argument(
+        "-s",
+        "--simulate",
+        action="store_true",
+        help="Do not move any pictures. Just simulate it.",
+    )
+    parser.add_argument(
+        "-t",
+        "--target",
+        default=os.path.expanduser("~/Bilder"),
+        help="target directory",
+    )
+    args = parser.parse_args()
+    logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
+    logger = logging.getLogger(__script_name__)
+
+    if not os.path.exists(args.target):
+        parser.error(f"Target directory '{args.target}' does not exist.")
+
+    os.nice(19)
+    for sdcard in find_sdcards():
+        logger.info("SD card found: %s", sdcard)
+        pictures = sorted(sdcard.find_pictures())
+        for picture in pictures:
+            if args.keep:
+                picture.copy(args.target, args.simulate)
+            else:
+                picture.move(args.target, args.simulate)
+    if not args.simulate and not args.keep:
+        clean_sdcard = os.path.join(os.path.dirname(sys.argv[0]), "clean-sdcard")
+        subprocess.run([clean_sdcard], check=True)
+
+
+if __name__ == "__main__":
+    main()
