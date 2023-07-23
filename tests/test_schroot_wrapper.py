@@ -179,6 +179,29 @@ class TestSchrootWrapper(unittest.TestCase):
         self._assert_all_run_mocks_called(mocks)
         self.assertEqual(run_mock.call_count, len(mocks))
 
+    @unittest.mock.patch("subprocess.run")
+    def test_main_add_ppa(self, run_mock: unittest.mock.MagicMock) -> None:
+        """main(): Add PPA APT source list."""
+
+        root_call = ["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r", "--"]
+        apt_install = root_call + ["apt-get", "install", "--no-install-recommends", "-y"]
+        mocks = [
+            RunMock(["schroot", "-c", "mantic", "-b"], 0, "session-id\n"),
+            RunMock(root_call + ["test", "-d", "/"], 0),
+            RunMock(root_call + ["apt-get", "update"], 0),
+            RunMock(apt_install + ["software-properties-common", "gpg-agent"], 0),
+            RunMock(root_call + ["add-apt-repository", "-y", "ppa:bdrung/ppa"], 0),
+            RunMock(["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r"], 42),
+            RunMock(["schroot", "-c", "session-id", "-e"], 0),
+        ]
+        run_mock.side_effect = run_side_effect(mocks)
+
+        self.assertEqual(
+            main(["-c", "mantic", "-d", "/", "-u", "root", "--ppa", "bdrung/ppa"]), 42
+        )
+        self._assert_all_run_mocks_called(mocks)
+        self.assertEqual(run_mock.call_count, len(mocks))
+
     def test_parse_args_minimal(self) -> None:
         """Test parse_args() with minimal arguments."""
         args = parse_args([])
@@ -190,6 +213,7 @@ class TestSchrootWrapper(unittest.TestCase):
                 "directory": os.getcwd(),
                 "enable_proposed": False,
                 "packages": [],
+                "ppa": [],
                 "proposed_components": ["main", "universe"],
                 "proposed_uri": "http://archive.ubuntu.com/ubuntu",
                 "user": getpass.getuser(),

@@ -58,6 +58,17 @@ class SchrootSession:
             subprocess.run(["schroot", "-c", self.session, "-e"], check=True)
             self.session = None
 
+    def _add_ppa(self, ppa: str) -> None:
+        if not ppa.startswith("ppa:"):
+            ppa = f"ppa:{ppa}"
+        self.run("/", "root", ["add-apt-repository", "-y", ppa])
+
+    def add_ppas(self, ppas: list[str]) -> None:
+        """Add given list of PPA APT sources."""
+        self.install_packages(["software-properties-common", "gpg-agent"])
+        for ppa in ppas:
+            self._add_ppa(ppa)
+
     def run(
         self,
         directory: typing.Optional[str] = None,
@@ -175,6 +186,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         " without recommends. Can be specified multiple times.",
     )
     parser.add_argument(
+        "--ppa",
+        default=[],
+        action="append",
+        help="PPA APT sources that should be added. Can be specified multiple times.",
+    )
+    parser.add_argument(
         "-e", "--enable-proposed", action="store_true", help="Enable -proposed pocket."
     )
     parser.add_argument(
@@ -209,6 +226,8 @@ def main(argv: list[str]) -> int:
 
         if args.enable_proposed:
             session.enable_proposed([args.proposed_uri], args.proposed_components)
+        if args.ppa:
+            session.add_ppas(args.ppa)
         if args.packages:
             session.install_packages(args.packages)
         return session.run(args.directory, args.user, check=False).returncode
