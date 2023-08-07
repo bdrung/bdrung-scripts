@@ -1,0 +1,45 @@
+#!/usr/bin/python3
+
+import argparse
+import sys
+import subprocess
+import re
+import tempfile
+import pathlib
+
+HEADER_FILE_RE = re.compile(r"^/usr/include/.*\.(h|hh|H|hp|hxx|hpp|HPP|h\+\+|tcc)$")
+
+
+def get_header_files(package: str) -> list[str]:
+    """Return list of C/C++ header files shipped in the given package."""
+    package_files = subprocess.run(
+        ["dpkg", "-L", package], check=True, capture_output=True, text=True
+    ).stdout.splitlines()
+    return [p for p in package_files if HEADER_FILE_RE.search(p)]
+
+
+def compile_header_check(package: str) -> int:
+    header_files = get_header_files(package)
+    header = "".join(f'#include "{x}"\n' for x in header_files)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        header_file = pathlib.Path(tmpdir) / f"{package}.h"
+        header_file.write_text(header)
+        print(
+            f"Temporary header file '{header_file}'"
+            f" with the following content will be compiled:\n{header}"
+        )
+        cmd = ["gcc", "-c", "-x", "c++", "-fpermissive", "-w", str(header_file)]
+        print(f"The GCC parameters: {' '.join(cmd)}")
+        gcc = subprocess.run(cmd, check=False)
+        return gcc.returncode
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("package")
+    args = parser.parse_args()
+    return compile_header_check(args.package)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
