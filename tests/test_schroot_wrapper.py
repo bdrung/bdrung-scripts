@@ -85,6 +85,8 @@ class TestSchrootWrapper(unittest.TestCase):
             RunMock(
                 root_call
                 + [
+                    "env",
+                    "DEBIAN_FRONTEND=noninteractive",
                     "apt-get",
                     "install",
                     "--no-install-recommends",
@@ -116,7 +118,17 @@ class TestSchrootWrapper(unittest.TestCase):
             RunMock(root_call + ["test", "-d", "/path"], 0),
             RunMock(root_call + ["apt-get", "update"], 0),
             RunMock(
-                root_call + ["apt-get", "install", "--no-install-recommends", "-y", "tzdata"], 0
+                root_call
+                + [
+                    "env",
+                    "DEBIAN_FRONTEND=noninteractive",
+                    "apt-get",
+                    "install",
+                    "--no-install-recommends",
+                    "-y",
+                    "tzdata",
+                ],
+                0,
             ),
             RunMock(["schroot", "-c", "session-id", "-d", "/path", "-u", user, "-r"], 0),
             RunMock(["schroot", "-c", "session-id", "-e"], 0),
@@ -184,12 +196,19 @@ class TestSchrootWrapper(unittest.TestCase):
         """main(): Add PPA APT source list."""
 
         root_call = ["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r", "--"]
-        apt_install = root_call + ["apt-get", "install", "--no-install-recommends", "-y"]
+        apt_install = [
+            "env",
+            "DEBIAN_FRONTEND=noninteractive",
+            "apt-get",
+            "install",
+            "--no-install-recommends",
+            "-y",
+        ]
         mocks = [
             RunMock(["schroot", "-c", "mantic", "-b"], 0, "session-id\n"),
             RunMock(root_call + ["test", "-d", "/"], 0),
             RunMock(root_call + ["apt-get", "update"], 0),
-            RunMock(apt_install + ["software-properties-common", "gpg-agent"], 0),
+            RunMock(root_call + apt_install + ["software-properties-common", "gpg-agent"], 0),
             RunMock(root_call + ["add-apt-repository", "-y", "ppa:bdrung/ppa"], 0),
             RunMock(["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r"], 42),
             RunMock(["schroot", "-c", "session-id", "-e"], 0),
