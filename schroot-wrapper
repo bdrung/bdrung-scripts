@@ -147,8 +147,16 @@ class SchrootSession:
     def install_packages(self, packages: list[str]) -> None:
         """Install given list of Debian packages (without recommends)."""
         self.apt_update()
+        apt_cmd = [
+            "env",
+            "DEBIAN_FRONTEND=noninteractive",
+            "apt-get",
+            "install",
+            "--no-install-recommends",
+            "-y",
+        ]
         packages = [self._copy_package_into_chroot(package) for package in packages]
-        self.run("/", "root", ["apt-get", "install", "--no-install-recommends", "-y"] + packages)
+        self.run("/", "root", apt_cmd + packages)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
