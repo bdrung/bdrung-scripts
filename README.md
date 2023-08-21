@@ -69,6 +69,18 @@ Example call:
 copy-mtime source_file target_file
 ```
 
+dpkg-which
+----------
+
+Determine which Debian packages provide the given commands. This is a /usr-merged supporting
+implementation of `dpkg -S $(which $command)`.
+
+Example call:
+
+```
+dpkg-which readlink
+```
+
 generate-gallery
 ----------------
 

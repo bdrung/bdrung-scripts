@@ -23,6 +23,7 @@ def get_source_files():
     """Return a list of sources files/directories (to check with flake8/pylint)."""
     scripts = [
         "copy-mtime",
+        "dpkg-which",
         "generate-gallery",
         "savedebdiff",
         "schroot-wrapper",

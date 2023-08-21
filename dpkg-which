@@ -1,0 +1,70 @@
+#!/usr/bin/python3
+
+# Copyright (C) 2023, Benjamin Drung <bdrung@posteo.de>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+# REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+# AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+# INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+# LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name
+
+"""Determine which Debian packages provide the given commands."""
+
+import argparse
+import pathlib
+import shutil
+import subprocess
+import sys
+import typing
+
+SEARCHPATH = "/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+
+
+def dpkg_which(command: str) -> typing.Optional[str]:
+    """Determine package providing the given command."""
+    command_path = shutil.which(command, path=SEARCHPATH)
+    if command_path is None:
+        return None
+    path = pathlib.Path(command_path).resolve()
+
+    dpkg = subprocess.run(["dpkg", "-S", path], capture_output=True, check=False, text=True)
+    if dpkg.returncode == 0:
+        return dpkg.stdout.strip()
+
+    # Try non-/usr path (for /usr-merged systems)
+    if path.parts[1] == "usr":
+        path = pathlib.Path("/" + "/".join(path.parts[2:]))
+        dpkg = subprocess.run(["dpkg", "-S", path], capture_output=True, check=False, text=True)
+        if dpkg.returncode == 0:
+            return dpkg.stdout.strip()
+
+    return None
+
+
+def main(argv: list[str]) -> int:
+    """Determine which Debian packages provide the given commands."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", nargs="*")
+    args = parser.parse_args(argv)
+
+    returncode = 0
+    for command in args.command:
+        package = dpkg_which(command)
+        if package:
+            print(package)
+        else:
+            returncode = 1
+    return returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))  # pragma: no cover
