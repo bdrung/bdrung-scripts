@@ -39,6 +39,7 @@ class SchrootSession:
 
     def __init__(self, chroot: str):
         self.chroot = chroot
+        self.release = self.get_ubuntu_codename()
         self.session = None
         self.apt_updated = False
         self.logger = logging.getLogger(__script_name__)
@@ -120,7 +121,7 @@ class SchrootSession:
         sources = (
             f"Types: deb\n"
             f"URIs: {' '.join(uris)}\n"
-            f"Suites: {self.chroot}-proposed\n"
+            f"Suites: {self.release}-proposed\n"
             f"Components: {' '.join(components)}\n"
         )
         cmd = ["sh", "-c", f"printf '{sources}' > /etc/apt/sources.list.d/ubuntu-proposed.sources"]
@@ -158,6 +159,25 @@ class SchrootSession:
         packages = [self._copy_package_into_chroot(package) for package in packages]
         self.run("/", "root", apt_cmd + packages)
 
+    def get_ubuntu_codename(self) -> str:
+        """Returns the Ubuntu codename of the schroot release from its /etc/os-release file."""
+        environment_file = pathlib.Path(
+            "/",
+            "var", 
+            "lib", 
+            "schroot", 
+            "chroots", 
+            self.chroot,
+            "etc",
+            "os-release")
+        if environment_file.exists():
+            f = open(environment_file, 'r')
+            lines = f.readlines()
+            f.close()
+            codename_line = next((l for l in lines if l.startswith("UBUNTU_CODENAME")), None)
+            if codename_line is not None:
+                return codename_line[codename_line.find("=") + 1:].strip()
+        return None
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     """Parse command line arguments and return namespace."""
