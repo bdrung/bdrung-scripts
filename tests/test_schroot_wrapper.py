@@ -172,6 +172,11 @@ class TestSchrootWrapper(unittest.TestCase):
             RunMock(["schroot", "-c", "focal", "-b"], 0, "session-id\n"),
             RunMock(root_call + ["test", "-d", "/root"], 0),
             RunMock(
+                root_call + ["sh", "-c", '. /etc/os-release && echo "$VERSION_CODENAME"'],
+                0,
+                "focal\n",
+            ),
+            RunMock(
                 root_call
                 + [
                     "sh",

@@ -107,6 +107,19 @@ class SchrootSession:
         )
         return process.stdout.strip()
 
+    def get_version_codename(self) -> str:
+        """Return VERSION_CODENAME from /etc/os-release in the chroot."""
+        process = self.run(
+            "/",
+            "root",
+            ["sh", "-c", '. /etc/os-release && echo "$VERSION_CODENAME"'],
+            encoding="utf-8",
+            stdout=subprocess.PIPE,
+        )
+        version_codename = process.stdout.strip()
+        assert re.match("^[a-z]+$", version_codename)
+        return version_codename
+
     def create_directory(self, directory: str, owner: str) -> None:
         """Create the directory in the chroot."""
         self.run("/", "root", ["install", "-d", "-o", owner, directory])
@@ -120,7 +133,7 @@ class SchrootSession:
         sources = (
             f"Types: deb\n"
             f"URIs: {' '.join(uris)}\n"
-            f"Suites: {self.chroot}-proposed\n"
+            f"Suites: {self.get_version_codename()}-proposed\n"
             f"Components: {' '.join(components)}\n"
         )
         cmd = ["sh", "-c", f"printf '{sources}' > /etc/apt/sources.list.d/ubuntu-proposed.sources"]
