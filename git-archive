@@ -20,8 +20,8 @@ set -eu
 TREE_ISH=${1:-HEAD}
 
 if test ! -e debian/changelog; then
-    echo "E: debian/changelog not found. You need to run this script in a packaging git branch." >&2
-    exit 1
+	echo "E: debian/changelog not found. You need to run this script in a packaging git branch." >&2
+	exit 1
 fi
 
 source=$(dpkg-parsechangelog -S Source)
@@ -31,12 +31,12 @@ upstream_version=$(echo "$version" | sed "s/-[^-]\+$//")
 tarball_name="../${source}_${upstream_version}.orig.tar.xz"
 
 if grep -q "^3.0 (quilt)$" debian/source/format 2>/dev/null; then
-    # Exclude debian directory when using 3.0 (quilt) source format.
-    git_archive_args=(. ':!debian/')
+	# Exclude debian directory when using 3.0 (quilt) source format.
+	git_archive_args=(. ':!debian/')
 fi
 
-echo "I: git archive --format=tar --prefix=${source}-${upstream_version}/ $TREE_ISH ${git_archive_args[*]} | xz -c -9 > ${tarball_name}"
-git archive --format=tar --prefix="${source}-${upstream_version}/" "$TREE_ISH" "${git_archive_args[@]}" | xz -c -9 > "${tarball_name}"
+echo "I: git archive --format=tar --prefix=${source}-${upstream_version}/ $TREE_ISH ${git_archive_args[*]} | xz -c -9 >${tarball_name}"
+git archive --format=tar --prefix="${source}-${upstream_version}/" "$TREE_ISH" "${git_archive_args[@]}" | xz -c -9 >"${tarball_name}"
 
 echo "I: gpg --output ${tarball_name}.asc --armor --detach-sign --yes ${tarball_name}"
 gpg --output "${tarball_name}.asc" --armor --detach-sign --yes "${tarball_name}"
