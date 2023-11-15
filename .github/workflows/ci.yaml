@@ -20,6 +20,7 @@ jobs:
           - debian:unstable-slim
           - ubuntu:jammy
           - ubuntu:lunar
+          - ubuntu:mantic
     container:
       image: ${{ matrix.container }}
     steps:
