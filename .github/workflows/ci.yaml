@@ -21,6 +21,7 @@ jobs:
           - ubuntu:jammy
           - ubuntu:lunar
           - ubuntu:mantic
+          - ubuntu:noble
     container:
       image: ${{ matrix.container }}
     steps:
