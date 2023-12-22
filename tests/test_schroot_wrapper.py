@@ -20,7 +20,6 @@ import os
 import platform
 import subprocess
 import tempfile
-import typing
 import unittest
 import unittest.mock
 
@@ -33,8 +32,8 @@ class RunMock:
 
     args: list[str]
     returncode: int
-    stdout: typing.Optional[str] = None
-    stderr: typing.Optional[str] = None
+    stdout: (str | None) = None
+    stderr: (str | None) = None
     call_count: int = 0
 
 

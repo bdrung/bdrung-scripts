@@ -16,7 +16,6 @@
 
 import subprocess
 import tempfile
-import typing
 import unittest
 import unittest.mock
 
@@ -125,7 +124,7 @@ class TestUserlint(unittest.TestCase):
         self.assertFalse(is_valid_name("mathiaz"))
 
     @staticmethod
-    def _commit(directory: str, message: str, author: typing.Optional[str] = None) -> None:
+    def _commit(directory: str, message: str, author: (str | None) = None) -> None:
         cmd = ["git", "commit", "--allow-empty", "-m", message]
         if author:
             cmd.append(f"--author={author}")

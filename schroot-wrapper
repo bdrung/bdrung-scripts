@@ -71,13 +71,13 @@ class SchrootSession:
 
     def run(
         self,
-        directory: typing.Optional[str] = None,
-        user: typing.Optional[str] = None,
-        cmd: typing.Optional[list[str]] = None,
+        directory: (str | None) = None,
+        user: (str | None) = None,
+        cmd: (list[str] | None) = None,
         check: bool = True,
-        encoding: typing.Optional[str] = None,
-        stdin: typing.Optional[typing.IO] = None,
-        stdout: typing.Optional[int] = None,
+        encoding: (str | None) = None,
+        stdin: (typing.IO | None) = None,
+        stdout: (int | None) = None,
     ) -> subprocess.CompletedProcess:
         # pylint: disable=too-many-arguments
         """Run schroot session."""

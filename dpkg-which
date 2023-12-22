@@ -24,12 +24,11 @@ import pathlib
 import shutil
 import subprocess
 import sys
-import typing
 
 SEARCHPATH = "/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
 
 
-def dpkg_which(command: str) -> typing.Optional[str]:
+def dpkg_which(command: str) -> str | None:
     """Determine package providing the given command."""
     command_path = shutil.which(command, path=SEARCHPATH)
     if command_path is None:

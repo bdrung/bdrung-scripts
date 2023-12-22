@@ -73,9 +73,7 @@ class Person:
         """Heuristic check if the name and public email is valid."""
         return is_valid_name(self.name) and is_valid_email(self.email)
 
-    def _get_found_match(
-        self, matches: list, match_on: str, match_value: str
-    ) -> typing.Optional[str]:
+    def _get_found_match(self, matches: list, match_on: str, match_value: str) -> str | None:
         if len(matches) == 1:
             return f"{matches[0]} {self}"
         logger = logging.getLogger(__script_name__)
@@ -88,7 +86,7 @@ class Person:
         )
         return None
 
-    def _suggested_mailmap_for_invalid_name(self, valid: typing.Iterable) -> typing.Optional[str]:
+    def _suggested_mailmap_for_invalid_name(self, valid: typing.Iterable) -> str | None:
         matching = [p for p in valid if p.email == self.email]
         if matching:
             return self._get_found_match(matching, "email address", self.email)
@@ -99,7 +97,7 @@ class Person:
 
         return None
 
-    def _suggested_mailmap_for_invalid_email(self, valid: typing.Iterable) -> typing.Optional[str]:
+    def _suggested_mailmap_for_invalid_email(self, valid: typing.Iterable) -> str | None:
         if self.email == "":
             matching = [p for p in valid if p.email == self.name]
             if matching:
@@ -115,7 +113,7 @@ class Person:
 
         return None
 
-    def suggested_mailmap(self, valid: typing.Iterable) -> typing.Optional[str]:
+    def suggested_mailmap(self, valid: typing.Iterable) -> str | None:
         """Heuristic to find correct names and email addresses."""
         mailmap = None
         if not is_valid_email(self.email):
