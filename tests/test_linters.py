@@ -29,7 +29,7 @@ class TestLinters(unittest.TestCase):
     This unittest class tests the linter test cases.
     """
 
-    def test_shellcheck_succeeds(self):
+    def test_shellcheck_succeeds(self) -> None:
         """shellchecks succeeds on shell code."""
         with tempfile.TemporaryDirectory() as tempdir:
             shell = os.path.join(tempdir, "test.sh")
@@ -38,7 +38,7 @@ class TestLinters(unittest.TestCase):
 
             self.assertEqual(run_shellcheck([shell], False), "")
 
-    def test_shellcheck_succeeds_verbose(self):
+    def test_shellcheck_succeeds_verbose(self) -> None:
         """shellchecks succeeds on shell code in verbose mode."""
         stderr = io.StringIO()
         with tempfile.TemporaryDirectory() as tempdir:
@@ -52,7 +52,7 @@ class TestLinters(unittest.TestCase):
                 stderr.getvalue(), f"Running following command:\nshellcheck {shell}\n"
             )
 
-    def test_shellcheck_fails(self):
+    def test_shellcheck_fails(self) -> None:
         """shellchecks fails on shell code."""
         with tempfile.TemporaryDirectory() as tempdir:
             shell = os.path.join(tempdir, "test.sh")

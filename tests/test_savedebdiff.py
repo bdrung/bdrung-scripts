@@ -19,6 +19,7 @@ import os
 import tempfile
 import unittest
 import unittest.mock
+from unittest.mock import MagicMock
 
 import unidiff
 
@@ -98,24 +99,24 @@ class TestSavedebdiff(unittest.TestCase):
 
     PREFIX = "savedebdiff-"
 
-    def test_derive_filename_from_debdiff(self):
+    def test_derive_filename_from_debdiff(self) -> None:
         filename = derive_filename_from_debdiff(unidiff.PatchSet(LIBEVENT_DEBDIFF))
         self.assertEqual(filename, "libevent_2.1.12-stable-5ubuntu1.debdiff")
 
-    def test_derive_filename_from_debdiff_missing_version(self):
+    def test_derive_filename_from_debdiff_missing_version(self) -> None:
         missing_version = unidiff.PatchSet(MISSING_VERSION_DEBDIFF)
         self.assertRaises(ValueError, derive_filename_from_debdiff, missing_version)
 
-    def test_derive_filename_from_debdiff_with_epoch(self):
+    def test_derive_filename_from_debdiff_with_epoch(self) -> None:
         filename = derive_filename_from_debdiff(unidiff.PatchSet(UPDATE_MANAGER_DEBDIFF))
         self.assertEqual(filename, "update-manager_23.04.1.debdiff")
 
-    def test_debian_changelog_not_found(self):
+    def test_debian_changelog_not_found(self) -> None:
         empty = unidiff.PatchSet("")
         self.assertRaises(ChangelogNotFoundError, derive_filename_from_debdiff, empty)
 
     @unittest.mock.patch("sys.stdin")
-    def test_main(self, stdin_mock):
+    def test_main(self, stdin_mock: MagicMock) -> None:
         stdin_mock.read.return_value = LIBEVENT_DEBDIFF
         with tempfile.TemporaryDirectory(prefix=self.PREFIX) as tmpdir:
             main(["--directory", tmpdir])
@@ -123,14 +124,14 @@ class TestSavedebdiff(unittest.TestCase):
         stdin_mock.read.assert_called_once_with()
 
     @unittest.mock.patch("sys.stdin")
-    def test_main_no_stdin(self, stdin_mock):
+    def test_main_no_stdin(self, stdin_mock: MagicMock) -> None:
         stdin_mock.read.return_value = ""
         self.assertRaisesRegex(SystemExit, "1", main, [])
         stdin_mock.read.assert_called_once_with()
 
     @unittest.mock.patch("subprocess.call")
     @unittest.mock.patch("sys.stdin")
-    def test_main_open(self, stdin_mock, call_mock):
+    def test_main_open(self, stdin_mock: MagicMock, call_mock: MagicMock) -> None:
         stdin_mock.read.return_value = LIBEVENT_DEBDIFF
         expected_filename = "libevent_2.1.12-stable-5ubuntu1.debdiff"
         with tempfile.TemporaryDirectory(prefix=self.PREFIX) as tmpdir:
@@ -141,7 +142,7 @@ class TestSavedebdiff(unittest.TestCase):
             )
         stdin_mock.read.assert_called_once_with()
 
-    def test_save_debdiff(self):
+    def test_save_debdiff(self) -> None:
         with tempfile.TemporaryDirectory(prefix=self.PREFIX) as tmpdir:
             filename = os.path.join(tmpdir, "debdiff")
             save_debdiff(filename, "foobar\n", False)

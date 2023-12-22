@@ -57,7 +57,7 @@ class ShellcheckTestCase(unittest.TestCase):
     on Shell source code.
     """
 
-    def test_shellcheck(self):
+    def test_shellcheck(self) -> None:
         """Test: Run shellcheck on Shell source code."""
         msg = run_shellcheck(SHELL_SCRIPTS, unittest_verbosity() >= 2)
         if msg:

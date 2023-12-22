@@ -37,13 +37,13 @@ __script_name__ = os.path.basename(sys.argv[0]) if __name__ == "__main__" else _
 class SchrootSession:
     """Context manager to hold a schroot session."""
 
-    def __init__(self, chroot: str):
+    def __init__(self, chroot: str) -> None:
         self.chroot = chroot
-        self.session = None
+        self.session: str | None = None
         self.apt_updated = False
         self.logger = logging.getLogger(__script_name__)
 
-    def __enter__(self):
+    def __enter__(self) -> typing.Self:
         process = subprocess.run(
             ["schroot", "-c", self.chroot, "-b"],
             check=True,
@@ -53,7 +53,7 @@ class SchrootSession:
         self.session = process.stdout.strip()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any) -> None:
         if self.session:
             subprocess.run(["schroot", "-c", self.session, "-e"], check=True)
             self.session = None
@@ -76,9 +76,9 @@ class SchrootSession:
         cmd: (list[str] | None) = None,
         check: bool = True,
         encoding: (str | None) = None,
-        stdin: (typing.IO | None) = None,
+        stdin: (typing.IO[bytes] | None) = None,
         stdout: (int | None) = None,
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[str]:
         # pylint: disable=too-many-arguments
         """Run schroot session."""
         assert self.session is not None
@@ -128,7 +128,7 @@ class SchrootSession:
         """Check if the directory exists in the chroot."""
         return self.run("/", "root", ["test", "-d", directory], check=False).returncode == 0
 
-    def enable_proposed(self, uris: list[str], components: list[str]):
+    def enable_proposed(self, uris: list[str], components: list[str]) -> None:
         """Enable -proposed pocket."""
         sources = (
             f"Types: deb\n"
@@ -140,7 +140,7 @@ class SchrootSession:
         self.run("/", "root", cmd)
         self.apt_update(force_refresh=True)
 
-    def apt_update(self, force_refresh: bool = False):
+    def apt_update(self, force_refresh: bool = False) -> None:
         """Run apt-get update if not already updated."""
         if not self.apt_updated or force_refresh:
             self.run("/", "root", ["apt-get", "update"])

@@ -22,6 +22,8 @@ import subprocess
 import tempfile
 import unittest
 import unittest.mock
+from collections.abc import Callable
+from typing import Any
 
 from .scripts.schroot_wrapper import SchrootSession, main, parse_args
 
@@ -37,7 +39,7 @@ class RunMock:
     call_count: int = 0
 
 
-def run_side_effect(responses: list[RunMock]):
+def run_side_effect(responses: list[RunMock]) -> Callable[..., subprocess.CompletedProcess[str]]:
     """Side effect for subprocess.run mocks.
 
     The args parameter from the subprocess.run call is looked up in the
@@ -46,7 +48,7 @@ def run_side_effect(responses: list[RunMock]):
     subprocess.run parameters.
     """
 
-    def _subprocess_run_mock(args, **kwargs) -> subprocess.CompletedProcess:
+    def _subprocess_run_mock(args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         for response in responses:
             if response.args == args:
                 response.call_count += 1

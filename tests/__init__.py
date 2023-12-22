@@ -31,7 +31,7 @@ def get_source_files() -> list[str]:
         "wallpaper-slideshow",
     ]
     modules = ["tests"]
-    py_files = []
+    py_files: list[str] = []
 
     files = []
     for code_file in scripts + modules + py_files:

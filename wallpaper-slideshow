@@ -85,7 +85,7 @@ WALLPAPER_TEMPLATE = """\
 """
 
 
-def duration_str(duration):
+def duration_str(duration: int) -> str:
     """Return duration in the biggest useful time unit (years, days, hours, minutes, seconds)."""
     if duration < 60:
         return f"{duration} seconds"
@@ -98,7 +98,7 @@ def duration_str(duration):
     return f"{duration / 31536000:.2f} years (= {duration} s)"
 
 
-def main():
+def main() -> None:
     """Create a GNOME wallpaper slideshow."""
     parser = argparse.ArgumentParser()
     parser.add_argument(

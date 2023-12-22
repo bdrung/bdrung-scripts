@@ -28,7 +28,7 @@ LOG_FORMAT = "%(name)s %(levelname)s: %(message)s"
 __script_name__ = os.path.basename(sys.argv[0]) if __name__ == "__main__" else __name__
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     """Main function with argument parsing."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", help="File to take the mtime from")

@@ -23,6 +23,7 @@ import os
 import re
 import sys
 from collections.abc import Iterable
+from typing import Self
 
 import publicsuffix2
 import pygit2
@@ -46,34 +47,34 @@ NAME_AND_EMAIL_RE = re.compile(rf"^(.*) ([A-Za-z0-9.+_-]+@[A-Za-z0-9.+-]+\.(?:{g
 class Person:
     """Represents an author or committer."""
 
-    def __init__(self, name: str, email: str, function: str):
+    def __init__(self, name: str, email: str, function: str) -> None:
         self.name = name
         self.email = email
         self.function = function
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, Person) and self.name == other.name and self.email == other.email
 
-    def __lt__(self, other):
+    def __lt__(self, other: Self) -> bool:
         return self.name < other.name or (self.name == other.name and self.email < other.email)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}(name={self.name!r}, email={self.email!r},"
             f" function={self.function!r})"
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} <{self.email}>"
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         """Heuristic check if the name and public email is valid."""
         return is_valid_name(self.name) and is_valid_email(self.email)
 
-    def _get_found_match(self, matches: list, match_on: str, match_value: str) -> str | None:
+    def _get_found_match(self, matches: list[Self], match_on: str, match_value: str) -> str | None:
         if len(matches) == 1:
             return f"{matches[0]} {self}"
         logger = logging.getLogger(__script_name__)
@@ -86,7 +87,7 @@ class Person:
         )
         return None
 
-    def _suggested_mailmap_for_invalid_name(self, valid: Iterable) -> str | None:
+    def _suggested_mailmap_for_invalid_name(self, valid: Iterable[Self]) -> str | None:
         matching = [p for p in valid if p.email == self.email]
         if matching:
             return self._get_found_match(matching, "email address", self.email)
@@ -97,7 +98,7 @@ class Person:
 
         return None
 
-    def _suggested_mailmap_for_invalid_email(self, valid: Iterable) -> str | None:
+    def _suggested_mailmap_for_invalid_email(self, valid: Iterable[Self]) -> str | None:
         if self.email == "":
             matching = [p for p in valid if p.email == self.name]
             if matching:
@@ -113,7 +114,7 @@ class Person:
 
         return None
 
-    def suggested_mailmap(self, valid: Iterable) -> str | None:
+    def suggested_mailmap(self, valid: Iterable[Self]) -> str | None:
         """Heuristic to find correct names and email addresses."""
         mailmap = None
         if not is_valid_email(self.email):
@@ -126,14 +127,14 @@ class Person:
 class Author(Person):
     """Represents an author."""
 
-    def __init__(self, name: str, email: str):
+    def __init__(self, name: str, email: str) -> None:
         super().__init__(name, email, "author")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name={self.name!r}, email={self.email!r})"
 
     @classmethod
-    def from_commit(cls, commit: pygit2.Commit):
+    def from_commit(cls, commit: pygit2.Commit) -> Self:
         """Return Author object from given commit."""
         return cls(commit.author.name, commit.author.email)
 
@@ -141,14 +142,14 @@ class Author(Person):
 class Committer(Person):
     """Represents a committer."""
 
-    def __init__(self, name: str, email: str):
+    def __init__(self, name: str, email: str) -> None:
         super().__init__(name, email, "committer")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name={self.name!r}, email={self.email!r})"
 
     @classmethod
-    def from_commit(cls, commit: pygit2.Commit):
+    def from_commit(cls, commit: pygit2.Commit) -> Self:
         """Return Committer object from given commit."""
         return cls(commit.committer.name, commit.committer.email)
 
@@ -175,8 +176,8 @@ def classify_poeple(
 ) -> tuple[set[Person], set[Person]]:
     """Classify authors and committers in list of valid and invalid ones."""
     logger = logging.getLogger(__script_name__)
-    valid = set()
-    invalid = set()
+    valid: set[Person] = set()
+    invalid: set[Person] = set()
 
     commits = 0
     for commit in repo.walk(reference.target):

@@ -16,6 +16,7 @@
 
 import unittest
 import unittest.mock
+from unittest.mock import MagicMock
 
 from .scripts.copy_mtime import main
 
@@ -25,7 +26,7 @@ class TestMain(unittest.TestCase):
 
     @unittest.mock.patch("os.path.getmtime")
     @unittest.mock.patch("os.utime")
-    def test_main(self, utime_mock, getmtime_mock):
+    def test_main(self, utime_mock: MagicMock, getmtime_mock: MagicMock) -> None:
         """Test main with mocked API calls."""
         mtime = 1648903471.3638148
         getmtime_mock.return_value = mtime
