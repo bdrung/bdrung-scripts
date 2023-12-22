@@ -43,8 +43,8 @@ def get_source_files() -> list[str]:
         if is_script:
             with open(code_file, "rb") as script_file:
                 shebang = script_file.readline().decode("utf-8")
-            if "python" in shebang:
-                files.append(code_file)
+            assert "python" in shebang
+            files.append(code_file)
         else:
             files.append(code_file)
     return files

@@ -142,6 +142,24 @@ class TestSchrootWrapper(unittest.TestCase):
 
     @unittest.mock.patch("subprocess.run")
     def test_main_fallback_home_directory(self, run_mock: unittest.mock.MagicMock) -> None:
+        """main(): Check fall back to home directory."""
+        root_call = ["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r", "--"]
+        mocks = [
+            RunMock(["schroot", "-c", "lunar", "-b"], 0, "session-id\n"),
+            RunMock(root_call + ["test", "-d", "/non-existing"], 1),
+            RunMock(root_call + ["sh", "-c", "realpath ~me"], 0, "/home/me\n"),
+            RunMock(root_call + ["test", "-d", "/home/me"], 0),
+            RunMock(["schroot", "-c", "session-id", "-d", "/home/me", "-u", "me", "-r"], 37),
+            RunMock(["schroot", "-c", "session-id", "-e"], 0),
+        ]
+        run_mock.side_effect = run_side_effect(mocks)
+
+        self.assertEqual(main(["-c", "lunar", "-d", "/non-existing", "-u", "me"]), 37)
+        self._assert_all_run_mocks_called(mocks)
+        self.assertEqual(run_mock.call_count, len(mocks))
+
+    @unittest.mock.patch("subprocess.run")
+    def test_main_missing_home_directory(self, run_mock: unittest.mock.MagicMock) -> None:
         """main(): Check fall back to home directory and creating it."""
         root_call = ["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r", "--"]
         mocks = [
@@ -188,12 +206,26 @@ class TestSchrootWrapper(unittest.TestCase):
                 0,
             ),
             RunMock(root_call + ["apt-get", "update"], 0),
+            RunMock(
+                root_call
+                + [
+                    "env",
+                    "DEBIAN_FRONTEND=noninteractive",
+                    "apt-get",
+                    "install",
+                    "--no-install-recommends",
+                    "-y",
+                    "tzdata",
+                ],
+                0,
+            ),
             RunMock(["schroot", "-c", "session-id", "-d", "/root", "-u", "root", "-r"], 0),
             RunMock(["schroot", "-c", "session-id", "-e"], 0),
         ]
         run_mock.side_effect = run_side_effect(mocks)
 
-        self.assertEqual(main(["-c", "focal", "-d", "/root", "-e", "-u", "root"]), 0)
+        argv = ["-c", "focal", "-d", "/root", "-e", "-p", "tzdata", "-u", "root"]
+        self.assertEqual(main(argv), 0)
         self._assert_all_run_mocks_called(mocks)
         self.assertEqual(run_mock.call_count, len(mocks))
 
@@ -216,14 +248,14 @@ class TestSchrootWrapper(unittest.TestCase):
             RunMock(root_call + ["apt-get", "update"], 0),
             RunMock(root_call + apt_install + ["software-properties-common", "gpg-agent"], 0),
             RunMock(root_call + ["add-apt-repository", "-y", "ppa:bdrung/ppa"], 0),
+            RunMock(root_call + ["add-apt-repository", "-y", "ppa:bdrung/staging"], 0),
             RunMock(["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r"], 42),
             RunMock(["schroot", "-c", "session-id", "-e"], 0),
         ]
         run_mock.side_effect = run_side_effect(mocks)
 
-        self.assertEqual(
-            main(["-c", "mantic", "-d", "/", "-u", "root", "--ppa", "bdrung/ppa"]), 42
-        )
+        ppa_argv = ["--ppa", "ppa:bdrung/ppa", "--ppa", "bdrung/staging"]
+        self.assertEqual(main(["-c", "mantic", "-d", "/", "-u", "root"] + ppa_argv), 42)
         self._assert_all_run_mocks_called(mocks)
         self.assertEqual(run_mock.call_count, len(mocks))
 

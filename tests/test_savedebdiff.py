@@ -30,7 +30,7 @@ from .scripts.savedebdiff import (
     save_debdiff,
 )
 
-LIBEVENT_DEBDIFF = """\
+LIBEVENT_CHANGELOG_DIFF = """\
 diff -Nru libevent-2.1.12-stable/debian/changelog libevent-2.1.12-stable/debian/changelog
 --- libevent-2.1.12-stable/debian/changelog	2022-04-15 17:26:52.000000000 +0200
 +++ libevent-2.1.12-stable/debian/changelog	2022-10-05 19:13:56.000000000 +0200
@@ -45,6 +45,8 @@ diff -Nru libevent-2.1.12-stable/debian/changelog libevent-2.1.12-stable/debian/
  libevent (2.1.12-stable-5) unstable; urgency=medium
  [trailing space protection]
    * d/control: Update maintainer
+"""
+LIBEVENT_CONTROL_DIFF = """\
 diff -Nru libevent-2.1.12-stable/debian/control libevent-2.1.12-stable/debian/control
 --- libevent-2.1.12-stable/debian/control	2022-04-15 17:26:42.000000000 +0200
 +++ libevent-2.1.12-stable/debian/control	2022-10-05 19:07:42.000000000 +0200
@@ -57,6 +59,7 @@ diff -Nru libevent-2.1.12-stable/debian/control libevent-2.1.12-stable/debian/co
  Priority: optional
  Build-Depends: debhelper-compat (= 13),
 """
+LIBEVENT_DEBDIFF = LIBEVENT_CHANGELOG_DIFF + LIBEVENT_CONTROL_DIFF
 MISSING_VERSION_DEBDIFF = """\
 diff -Nru apport-2.23.1-0ubuntu3.1/debian/changelog apport-2.23.1-0ubuntu3.2/debian/changelog
 --- apport-2.23.1-0ubuntu3.1/debian/changelog	2023-04-12 11:24:37.000000000 +0200
@@ -112,7 +115,7 @@ class TestSavedebdiff(unittest.TestCase):
         self.assertEqual(filename, "update-manager_23.04.1.debdiff")
 
     def test_debian_changelog_not_found(self) -> None:
-        empty = unidiff.PatchSet("")
+        empty = unidiff.PatchSet(LIBEVENT_CONTROL_DIFF)
         self.assertRaises(ChangelogNotFoundError, derive_filename_from_debdiff, empty)
 
     @unittest.mock.patch("sys.stdin")
@@ -139,6 +142,17 @@ class TestSavedebdiff(unittest.TestCase):
             self.assertEqual(os.listdir(tmpdir), [expected_filename])
             call_mock.assert_called_once_with(
                 ["xdg-open", os.path.join(tmpdir, expected_filename)]
+            )
+        stdin_mock.read.assert_called_once_with()
+
+    @staticmethod
+    @unittest.mock.patch("sys.stdin")
+    def test_main_working_directory(stdin_mock: MagicMock) -> None:
+        stdin_mock.read.return_value = LIBEVENT_DEBDIFF
+        with unittest.mock.patch("builtins.open", unittest.mock.mock_open()) as mock_file:
+            main([])
+            mock_file.assert_called_once_with(
+                "libevent_2.1.12-stable-5ubuntu1.debdiff", "w", encoding="utf-8"
             )
         stdin_mock.read.assert_called_once_with()
 

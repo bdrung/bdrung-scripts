@@ -16,8 +16,10 @@
 
 import contextlib
 import io
+import pathlib
 import unittest
 import unittest.mock
+from unittest.mock import MagicMock
 
 from .scripts.dpkg_which import dpkg_which, main
 
@@ -52,7 +54,18 @@ class TestDpkgWhich(unittest.TestCase):
         self.assertEqual(returncode, 1)
 
     @unittest.mock.patch("shutil.which")
-    def test_manually_installed_binary(self, which_mock: unittest.mock.MagicMock) -> None:
+    def test_manually_installed_binary(self, which_mock: MagicMock) -> None:
         """Test command installed outside of dpkg."""
         which_mock.return_value = "/sbin/manually-installed-binary"
         self.assertEqual(dpkg_which("manually-installed-binary"), None)
+        which_mock.assert_called_once()
+
+    @unittest.mock.patch("shutil.which")
+    @unittest.mock.patch("pathlib.Path.resolve")
+    def test_non_usr_merge(self, resolve_mock: MagicMock, which_mock: MagicMock) -> None:
+        """Test command installed outside of dpkg."""
+        which_mock.return_value = "/sbin/non-existing"
+        resolve_mock.return_value = pathlib.Path("/sbin/non-existing")
+        self.assertEqual(dpkg_which("non-existing"), None)
+        resolve_mock.assert_called_once()
+        which_mock.assert_called_once()
