@@ -36,7 +36,7 @@ class MypyTestCase(unittest.TestCase):
             "--scripts-are-modules",
             "--strict",
         ] + get_source_files()
-        if unittest_verbosity() >= 2:  # pragma: no cover
+        if unittest_verbosity() >= 2:
             sys.stderr.write(f"Running following command:\n{' '.join(cmd)}\n")
         process = subprocess.run(cmd, capture_output=True, check=False, text=True)
 
