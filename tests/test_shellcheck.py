@@ -36,14 +36,14 @@ def run_shellcheck(shell_scripts: list[str], verbose: bool) -> str:
         return ""
 
     msgs = []
-    if shellcheck.stderr:
+    if shellcheck.stderr:  # pragma: no cover
         msgs.append(
             f"shellcheck exited with code {shellcheck.returncode} "
             f"and has unexpected output on stderr:\n{shellcheck.stderr.decode().rstrip()}"
         )
     if shellcheck.stdout:
         msgs.append(f"shellcheck found issues:\n{shellcheck.stdout.decode().rstrip()}")
-    if not msgs:
+    if not msgs:  # pragma: no cover
         msgs.append(
             f"shellcheck exited with code {shellcheck.returncode} "
             f"and has no output on stdout or stderr."
