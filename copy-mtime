@@ -28,12 +28,12 @@ LOG_FORMAT = "%(name)s %(levelname)s: %(message)s"
 __script_name__ = os.path.basename(sys.argv[0]) if __name__ == "__main__" else __name__
 
 
-def main(args):
+def main(argv):
     """Main function with argument parsing."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", help="File to take the mtime from")
     parser.add_argument("target", help="File to change the mtime")
-    args = parser.parse_args(args)
+    args = parser.parse_args(argv)
     logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
 
     mtime = os.path.getmtime(args.source)
