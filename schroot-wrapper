@@ -71,8 +71,8 @@ class SchrootSession:
 
     def run(
         self,
-        directory: (str | None) = None,
-        user: (str | None) = None,
+        directory: str,
+        user: str,
         cmd: (list[str] | None) = None,
         check: bool = True,
         encoding: (str | None) = None,
@@ -82,12 +82,7 @@ class SchrootSession:
         # pylint: disable=too-many-arguments
         """Run schroot session."""
         assert self.session is not None
-        schroot_cmd = ["schroot", "-c", self.session]
-        if directory:
-            schroot_cmd += ["-d", directory]
-        if user:
-            schroot_cmd += ["-u", user]
-        schroot_cmd.append("-r")
+        schroot_cmd = ["schroot", "-c", self.session, "-d", directory, "-u", user, "-r"]
         if cmd:
             schroot_cmd.append("--")
             schroot_cmd += cmd
