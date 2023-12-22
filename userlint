@@ -22,7 +22,7 @@ import logging
 import os
 import re
 import sys
-import typing
+from collections.abc import Iterable
 
 import publicsuffix2
 import pygit2
@@ -86,7 +86,7 @@ class Person:
         )
         return None
 
-    def _suggested_mailmap_for_invalid_name(self, valid: typing.Iterable) -> str | None:
+    def _suggested_mailmap_for_invalid_name(self, valid: Iterable) -> str | None:
         matching = [p for p in valid if p.email == self.email]
         if matching:
             return self._get_found_match(matching, "email address", self.email)
@@ -97,7 +97,7 @@ class Person:
 
         return None
 
-    def _suggested_mailmap_for_invalid_email(self, valid: typing.Iterable) -> str | None:
+    def _suggested_mailmap_for_invalid_email(self, valid: Iterable) -> str | None:
         if self.email == "":
             matching = [p for p in valid if p.email == self.name]
             if matching:
@@ -113,7 +113,7 @@ class Person:
 
         return None
 
-    def suggested_mailmap(self, valid: typing.Iterable) -> str | None:
+    def suggested_mailmap(self, valid: Iterable) -> str | None:
         """Heuristic to find correct names and email addresses."""
         mailmap = None
         if not is_valid_email(self.email):
@@ -172,7 +172,7 @@ def is_valid_name(name: str) -> bool:
 
 def classify_poeple(
     repo: pygit2.Repository, reference: pygit2.Reference
-) -> typing.Tuple[set[Person], set[Person]]:
+) -> tuple[set[Person], set[Person]]:
     """Classify authors and committers in list of valid and invalid ones."""
     logger = logging.getLogger(__script_name__)
     valid = set()
