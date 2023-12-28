@@ -145,6 +145,30 @@ Example call to install a locally built package in the chroot:
 schroot-wrapper -c lunar -p ../tzdata_2022g-1ubuntu1_all.deb
 ```
 
+timelapse
+---------
+
+Generate a time-lapse video from a series of images using FFmpeg.
+
+The input directory need to contain JPEG images that are in alphabetical order
+and all images should have the same resolution. The resolution is read from the
+first image and the needed scale and crop is calculated to get to the specified
+video resolution. Unless specified the generated video name is derived from the
+input directory name.
+
+Example call:
+
+```
+timelapse -d ~/path/to/images
+```
+
+Example call to generate a 4K H265 video with 60 frames per second and lower
+Constant Rate Factor (CRF) for better quality from the current directory:
+
+```
+timelapse -c libx265 -s 3840x2160 --crf 23 --fps 60
+```
+
 userlint
 --------
 

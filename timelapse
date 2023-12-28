@@ -1,0 +1,262 @@
+#!/usr/bin/python3
+
+# Copyright 2022 Benjamin Drung <bdrung@posteo.de>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+"""Generate a time-lapse video from a series of images using FFmpeg.
+
+The input directory need to contain JPEG images that are in alphabetical order
+and all images should have the same resolution. The resolution is read from the
+first image and the needed scale and crop is calculated to get to the specified
+video resolution. Unless specified the generated video name is derived from the
+input directory name.
+"""
+
+import argparse
+import dataclasses
+import logging
+import os
+import pathlib
+import re
+import subprocess
+import sys
+import typing
+
+from PIL import Image
+
+INPUT_GLOB = "*.jpg"
+LOG_FORMAT = "%(name)s %(levelname)s: %(message)s"
+__script_name__ = os.path.basename(sys.argv[0]) if __name__ == "__main__" else __name__
+
+
+@dataclasses.dataclass
+class Codec:
+    """FFmpeg codec"""
+
+    name: str
+    container: str
+    default_crf: int
+    ffmpeg_args: list[str]
+
+
+CODECS = [
+    Codec("libx264", "mp4", 23, ["-profile:v", "high"]),
+    Codec("libx265", "mp4", 28, []),
+    # For libvpx, there is no default CRF. CRF 31 is recommended for 1080p HD video.
+    Codec("libvpx-vp9", "webm", 31, []),  # Needs two passes
+    Codec(
+        "libaom-av1",
+        "webm",
+        50,
+        ["-b:v", "0", "-tile-columns", "3", "-speed", "4", "-strict", "experimental"],
+    ),
+]
+CODEC_DICT = {codec.name: codec for codec in CODECS}
+
+
+@dataclasses.dataclass
+class Size:
+    """Size of an image or video (width x height)."""
+
+    _SIZE_RE = re.compile("^([0-9]+)x([0-9]+)$")
+
+    width: int
+    height: int
+
+    def __str__(self) -> str:
+        return f"{self.width}x{self.height}"
+
+    @classmethod
+    def from_image(cls, image_path: pathlib.Path) -> typing.Self:
+        """Dertermine the size (width and height) from the given image."""
+        logger = logging.getLogger(__script_name__)
+        image = Image.open(image_path)
+        width, height = image.size
+        size = cls(width, height)
+        logger.info("Size of '%s': %s", image_path, size)
+        return size
+
+    @classmethod
+    def from_str(cls, size: str) -> typing.Self:
+        """Parse size from the given string in the format <width>x<height>."""
+        match = cls._SIZE_RE.search(size)
+        if not match:
+            raise ValueError(f"Size '{size}' is not in the format <width>x<height>.")
+        return cls(int(match.group(1)), int(match.group(2)))
+
+    def resolution_crop(self, output_size: typing.Self) -> typing.Self:
+        """Dermine image crop to match the resolution of the output size.
+
+        E.g. a 4:3 image needs to be cropped at the top/bottom to match 16:9.
+        """
+        if output_size.height * self.width < output_size.width * self.height:
+            # Crop vertical
+            height = output_size.height * self.width // output_size.width
+            return self.__class__(self.width, height)
+        # Crop horizontal
+        width = output_size.width * self.height // output_size.height
+        return self.__class__(width, self.height)
+
+
+def generate_timelapse(
+    args: argparse.Namespace, output_name: pathlib.Path, output_size: Size, input_size: Size
+) -> int:
+    """Generate the time-lapse.
+
+    The images are cropped centered by default.
+    """
+    logger = logging.getLogger(__script_name__)
+    crop_size = input_size.resolution_crop(output_size)
+    logger.info(
+        "Crop images from %s to %s to match output resolution %s.",
+        input_size,
+        crop_size,
+        args.size,
+    )
+    crop_left = (input_size.width - crop_size.width) * args.crop_left // 100
+    crop_top = (input_size.height - crop_size.height) * args.crop_top // 100
+
+    cmd = (
+        [
+            "ffmpeg",
+            "-r",
+            str(args.fps),
+            "-f",
+            "image2",
+            "-pattern_type",
+            "glob",
+            "-i",
+            f"{args.directory}/{INPUT_GLOB}",
+            "-filter:v",
+            f"crop={crop_size.width}:{crop_size.height}:{crop_left}:{crop_top},"
+            f"scale={output_size.width}:{output_size.height}",
+            "-vcodec",
+            args.codec.name,
+            "-crf",
+            str(args.crf),
+            "-pix_fmt",
+            "yuv420p",
+        ]
+        + args.codec.ffmpeg_args
+        + [str(output_name)]
+    )
+    logger.info("Calling: %s", " ".join(cmd))
+    try:
+        ffmpeg = subprocess.run(cmd, check=False)
+    except FileNotFoundError as error:
+        logger.error("%s not found. Please install %s!", error.filename, error.filename)
+        return 1
+    return ffmpeg.returncode
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse command line arguments and return namespace."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "-d",
+        "--directory",
+        default=".",
+        help=f"Input directory of images in JPEG format (glob: {INPUT_GLOB}).",
+    )
+    parser.add_argument(
+        "-n", "--name", help="Output time-lapse video name (default: directory name)."
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        default=".",
+        help="Output directory for the time-lapse video (default: %(default)s).",
+    )
+    parser.add_argument(
+        "-s", "--size", default="1920x1080", help="Output size (default: %(default)s)"
+    )
+    parser.add_argument(
+        "-c",
+        "--codec",
+        default="libx264",
+        choices=[codec.name for codec in CODECS],
+        help="FFmpeg codec to use for the video encoder",
+    )
+    parser.add_argument(
+        "--crf", type=int, help="Constant Rate Factor (0-51 for x264, 4-63 for vpx)"
+    )
+    parser.add_argument(
+        "--fps", type=int, default=24, help="Frames per second (default: %(default)s)"
+    )
+    parser.add_argument(
+        "-t",
+        "--crop-top",
+        default=50,
+        type=int,
+        help="Percentage to crop from the top compared to the bottom (default: %(default)s%%)",
+    )
+    parser.add_argument(
+        "-l",
+        "--crop-left",
+        default=50,
+        type=int,
+        help="Percentage to crop from the left compared to the right (default: %(default)s%%)",
+    )
+    args = parser.parse_args(argv)
+
+    args.codec = CODEC_DICT[args.codec]
+    args.directory = pathlib.Path(args.directory)
+    args.output = pathlib.Path(args.output)
+    args.size = Size.from_str(args.size)
+    if not args.crf:
+        args.crf = args.codec.default_crf
+
+    if not args.directory.is_dir():
+        parser.error(f"'{args.directory}' is not a directory.")
+    if not args.output.is_dir():
+        parser.error(f"'{args.output}' is not a directory.")
+
+    return args
+
+
+def _determine_output_filename(name: str, args: argparse.Namespace) -> str:
+    if not name:
+        name = args.directory.name.replace(" ", "_")
+    return (
+        f"{name}_{args.size}_{args.fps}fps_{args.codec.name}_crf{args.crf}.{args.codec.container}"
+    )
+
+
+def _get_input_images(directory: pathlib.Path) -> list[pathlib.Path]:
+    return sorted(directory.glob(INPUT_GLOB))
+
+
+def main(argv: list[str]) -> int:
+    """Generate a time-lapse video from a series of images using FFmpeg."""
+    args = parse_args(argv)
+    logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
+    logger = logging.getLogger(__script_name__)
+
+    input_images = _get_input_images(args.directory)
+    if not input_images:
+        logger.error("Found no input JPEG images in '%s'.", args.directory)
+        return 1
+    logger.info("Found %i input JPEG images in '%s'.", len(input_images), args.directory)
+
+    input_size = Size.from_image(input_images[0])
+    output_name = args.output / _determine_output_filename(args.name, args)
+    logger.info("Output filename: %s", output_name)
+    if output_name.exists():
+        logger.warning("Output time-lapse video '%s' already exists.", output_name)
+        return 0
+    return generate_timelapse(args, output_name, args.size, input_size)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))  # pragma: no cover

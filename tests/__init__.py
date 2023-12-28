@@ -27,6 +27,7 @@ def get_source_files() -> list[str]:
         "generate-gallery",
         "savedebdiff",
         "schroot-wrapper",
+        "timelapse",
         "userlint",
         "wallpaper-slideshow",
     ]
