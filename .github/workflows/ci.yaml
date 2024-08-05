@@ -20,6 +20,7 @@ jobs:
         container:
           - debian:bookworm-slim
           - debian:unstable-slim
+          - ubuntu:noble
     container:
       image: ${{ matrix.container }}
     steps:
