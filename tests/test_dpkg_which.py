@@ -17,6 +17,7 @@
 import contextlib
 import io
 import pathlib
+import subprocess
 import unittest
 import unittest.mock
 from unittest.mock import MagicMock
@@ -33,8 +34,8 @@ class TestDpkgWhich(unittest.TestCase):
         """Test successfully finding the command."""
         stdout = io.StringIO()
         with contextlib.redirect_stdout(stdout):
-            returncode = main(["ls"])
-        self.assertEqual(stdout.getvalue(), "coreutils: /bin/ls\n")
+            returncode = main(["sort"])
+        self.assertEqual(stdout.getvalue(), "coreutils: /usr/bin/sort\n")
         self.assertEqual(returncode, 0)
 
     def test_main_failure(self) -> None:
@@ -52,6 +53,21 @@ class TestDpkgWhich(unittest.TestCase):
             returncode = main(["non-existing-binary", "sort"])
         self.assertEqual(stdout.getvalue(), "coreutils: /usr/bin/sort\n")
         self.assertEqual(returncode, 1)
+
+    @unittest.mock.patch("subprocess.run")
+    def test_dpkg_which_fallback(self, run_mock: MagicMock) -> None:
+        """Test dpkg_which to fallback to check non-/usr path."""
+        run_mock.side_effect = [
+            subprocess.CompletedProcess(
+                MagicMock(), 1, "", "dpkg-query: no path found matching pattern /usr/bin/ls"
+            ),
+            subprocess.CompletedProcess(MagicMock(), 0, "coreutils: /bin/ls", ""),
+        ]
+        self.assertEqual(dpkg_which("ls"), "coreutils: /bin/ls")
+        self.assertEqual(run_mock.call_count, 2)
+        run_mock.assert_called_with(
+            ["dpkg", "-S", pathlib.Path("/bin/ls")], capture_output=True, check=False, text=True
+        )
 
     @unittest.mock.patch("shutil.which")
     def test_manually_installed_binary(self, which_mock: MagicMock) -> None:
