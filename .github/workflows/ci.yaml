@@ -21,6 +21,7 @@ jobs:
           - debian:bookworm-slim
           - debian:unstable-slim
           - ubuntu:noble
+          - ubuntu:oracular
     container:
       image: ${{ matrix.container }}
     steps:
