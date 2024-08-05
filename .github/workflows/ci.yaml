@@ -19,6 +19,7 @@ jobs:
       matrix:
         container:
           - debian:bookworm-slim
+          - debian:trixie-slim
           - debian:unstable-slim
           - ubuntu:noble
           - ubuntu:oracular
