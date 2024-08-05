@@ -34,8 +34,8 @@ class RunMock:
 
     args: list[str]
     returncode: int
-    stdout: (str | None) = None
-    stderr: (str | None) = None
+    stdout: str | None = None
+    stderr: str | None = None
     call_count: int = 0
 
 

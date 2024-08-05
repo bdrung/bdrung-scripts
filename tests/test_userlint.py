@@ -124,7 +124,7 @@ class TestUserlint(unittest.TestCase):
         self.assertFalse(is_valid_name("mathiaz"))
 
     @staticmethod
-    def _commit(directory: str, message: str, author: (str | None) = None) -> None:
+    def _commit(directory: str, message: str, author: str | None = None) -> None:
         cmd = ["git", "commit", "--allow-empty", "-m", message]
         if author:
             cmd.append(f"--author={author}")

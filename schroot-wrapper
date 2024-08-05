@@ -73,11 +73,11 @@ class SchrootSession:
         self,
         directory: str,
         user: str,
-        cmd: (list[str] | None) = None,
+        cmd: list[str] | None = None,
         check: bool = True,
-        encoding: (str | None) = None,
-        stdin: (typing.IO[bytes] | None) = None,
-        stdout: (int | None) = None,
+        encoding: str | None = None,
+        stdin: typing.IO[bytes] | None = None,
+        stdout: int | None = None,
     ) -> subprocess.CompletedProcess[str]:
         # pylint: disable=too-many-arguments
         """Run schroot session."""
