@@ -28,7 +28,6 @@ import typing
 
 import apt
 
-SCHROOT = "noble-locale"
 LOG_FORMAT = "%(name)s %(levelname)s: %(message)s"
 __script_name__ = os.path.basename(sys.argv[0]) if __name__ == "__main__" else __name__
 
@@ -246,14 +245,14 @@ class Package2Affection(collections.abc.Mapping[str, bool | None]):
         cursor = self.connection.execute("SELECT 1 FROM package_affected LIMIT 1")
         return cursor.fetchone() is None
 
-    def process_package(self, package: str, timeout: float) -> None:
+    def process_package(self, package: str, chroot: str, timeout: float) -> None:
         """Analyze the package.
 
         Try to install the package with ISO-8859-1 locale. If that fails,
         try to remove the package to check if the failure comes from the
         package or from a dependency.
         """
-        with SchrootSession(SCHROOT) as session:
+        with SchrootSession(chroot) as session:
             start = time.perf_counter()
             install_affected = session.install(package, timeout)
             duration = time.perf_counter() - start
@@ -271,7 +270,7 @@ class Package2Affection(collections.abc.Mapping[str, bool | None]):
                 return
 
         # Installation failed. Now install with UTF-8
-        with SchrootSession(SCHROOT) as session:
+        with SchrootSession(chroot) as session:
             start = time.perf_counter()
             install_affected = session.install(package, timeout, encoding="utf-8")
             duration = time.perf_counter() - start
@@ -289,10 +288,13 @@ class Package2Affection(collections.abc.Mapping[str, bool | None]):
             duration = time.perf_counter() - start
             self.set_remove(package, remove_affected, duration)
 
-    def process_matching(self, only: str, section: str, retry: float, timeout: float) -> None:
+    # pylint: disable-next=too-many-arguments
+    def process_matching(
+        self, chroot: str, only: str, section: str, retry: float, timeout: float
+    ) -> None:
         """Process all packages that have a matching name and section."""
         for package in self.iter_unprocessed(only, section, retry):
-            self.process_package(package, timeout)
+            self.process_package(package, chroot, timeout)
 
 
 class SchrootSession:
@@ -409,6 +411,7 @@ class SchrootSession:
 def _main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--arch", default="amd64")
+    parser.add_argument("-c", "--chroot", default="noble-locale")
     parser.add_argument(
         "-u", "--update", action="store_true", help="Update list of package from the APT cache"
     )
@@ -440,7 +443,9 @@ def _main() -> None:
     package2affection = Package2Affection(pathlib.Path(args.db))
     if args.update or package2affection.is_empty():
         package2affection.add_from_apt_cache(args.arch)
-    package2affection.process_matching(args.only, args.section, args.retry, args.timeout)
+    package2affection.process_matching(
+        args.chroot, args.only, args.section, args.retry, args.timeout
+    )
 
 
 if __name__ == "__main__":

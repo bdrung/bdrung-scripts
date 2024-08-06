@@ -111,7 +111,7 @@ class TestPackage2Affection(unittest.TestCase):
         """Test process_package() for an unaffected package."""
         package2affection = Package2Affection()
         package2affection.add_package("dash", "dash", "main")
-        package2affection.process_package("dash", 60.0)
+        package2affection.process_package("dash", "noble-locale", 60.0)
         self.assertEqual(package2affection["dash"], False)
 
     def test_create_and_reopen(self) -> None:
