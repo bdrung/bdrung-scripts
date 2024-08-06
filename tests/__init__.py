@@ -24,6 +24,7 @@ def get_source_files() -> list[str]:
     scripts = [
         "copy-mtime",
         "dpkg-which",
+        "find_affected.py",
         "generate-gallery",
         "savedebdiff",
         "schroot-wrapper",
