@@ -23,7 +23,7 @@ import unittest
 
 from . import get_source_files, unittest_verbosity
 
-CONFIG = os.path.join(os.path.dirname(__file__), "..", ".pylintrc")
+CONFIG = os.path.join(os.path.dirname(__file__), "..", "pyproject.toml")
 
 
 class PylintTestCase(unittest.TestCase):
