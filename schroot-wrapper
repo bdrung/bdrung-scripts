@@ -79,7 +79,7 @@ class SchrootSession:
         stdin: typing.IO[bytes] | None = None,
         stdout: int | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         """Run schroot session."""
         assert self.session is not None
         schroot_cmd = ["schroot", "-c", self.session, "-d", directory, "-u", user, "-r"]
