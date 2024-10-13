@@ -181,7 +181,7 @@ def classify_poeple(
 
     commits = 0
     for commit in repo.walk(reference.target):
-        logger.debug("Checking commit %s...", commit.hex)
+        logger.debug("Checking commit %s...", commit.id)
         author = Author.from_commit(commit)
         committer = Committer.from_commit(commit)
         if author.is_valid():
