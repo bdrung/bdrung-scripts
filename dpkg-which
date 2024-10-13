@@ -35,14 +35,18 @@ def dpkg_which(command: str) -> str | None:
         return None
     path = pathlib.Path(command_path).resolve()
 
-    dpkg = subprocess.run(["dpkg", "-S", path], capture_output=True, check=False, text=True)
+    dpkg = subprocess.run(
+        ["dpkg", "-S", path], capture_output=True, check=False, text=True
+    )
     if dpkg.returncode == 0:
         return dpkg.stdout.strip()
 
     # Try non-/usr path (for /usr-merged systems)
     if path.parts[1] == "usr":
         path = pathlib.Path("/" + "/".join(path.parts[2:]))
-        dpkg = subprocess.run(["dpkg", "-S", path], capture_output=True, check=False, text=True)
+        dpkg = subprocess.run(
+            ["dpkg", "-S", path], capture_output=True, check=False, text=True
+        )
         if dpkg.returncode == 0:
             return dpkg.stdout.strip()
 

@@ -19,7 +19,14 @@ import tempfile
 import unittest
 import unittest.mock
 
-from .scripts.userlint import Author, Committer, Person, is_valid_email, is_valid_name, main
+from .scripts.userlint import (
+    Author,
+    Committer,
+    Person,
+    is_valid_email,
+    is_valid_name,
+    main,
+)
 
 
 class TestPerson(unittest.TestCase):
@@ -133,7 +140,9 @@ class TestUserlint(unittest.TestCase):
     def _prepare_git_repository(self, directory: str, name: str, email: str) -> None:
         subprocess.run(["git", "init", "-b", "main"], check=True, cwd=directory)
         subprocess.run(["git", "config", "user.name", name], check=True, cwd=directory)
-        subprocess.run(["git", "config", "user.email", email], check=True, cwd=directory)
+        subprocess.run(
+            ["git", "config", "user.email", email], check=True, cwd=directory
+        )
         self._commit(directory, "Initial commit")
 
     def test_main(self) -> None:

@@ -53,7 +53,9 @@ class SchrootSession:
         self.session = process.stdout.strip()
         return self
 
-    def __exit__(self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any) -> None:
+    def __exit__(
+        self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any
+    ) -> None:
         assert self.session
         subprocess.run(["schroot", "-c", self.session, "-e"], check=True)
         self.session = None
@@ -121,7 +123,8 @@ class SchrootSession:
 
     def check_directory(self, directory: str) -> bool:
         """Check if the directory exists in the chroot."""
-        return self.run("/", "root", ["test", "-d", directory], check=False).returncode == 0
+        test_cmd = self.run("/", "root", ["test", "-d", directory], check=False)
+        return test_cmd.returncode == 0
 
     def enable_proposed(self, uris: list[str], components: list[str]) -> None:
         """Enable -proposed pocket."""
@@ -131,7 +134,11 @@ class SchrootSession:
             f"Suites: {self.get_version_codename()}-proposed\n"
             f"Components: {' '.join(components)}\n"
         )
-        cmd = ["sh", "-c", f"printf '{sources}' > /etc/apt/sources.list.d/ubuntu-proposed.sources"]
+        cmd = [
+            "sh",
+            "-c",
+            f"printf '{sources}' > /etc/apt/sources.list.d/ubuntu-proposed.sources",
+        ]
         self.run("/", "root", cmd)
         self.apt_update(force_refresh=True)
 
@@ -148,7 +155,11 @@ class SchrootSession:
         chroot_path = pathlib.Path("/root") / deb_file.name
         with deb_file.open("rb") as input_file:
             self.run(
-                "/", "root", ["tee", str(chroot_path)], stdin=input_file, stdout=subprocess.DEVNULL
+                "/",
+                "root",
+                ["tee", str(chroot_path)],
+                stdin=input_file,
+                stdout=subprocess.DEVNULL,
             )
         return str(chroot_path)
 
@@ -176,23 +187,24 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "-c",
         "--chroot",
         default=os_release["VERSION_CODENAME"],
-        help="Specify a chroot or active session to use. (default: use current distribution"
-        " codename '%(default)s')",
+        help="Specify a chroot or active session to use. (default: use"
+        " current distribution codename '%(default)s')",
     )
     parser.add_argument(
         "-d",
         "--directory",
         default=os.getcwd(),
-        help="Change to directory inside the chroot before running the command or login shell."
-        " Use the current directory if it exists in the chroot. Otherwise fall back to the user's"
-        " home directory (and create the directory if it is missing).",
+        help="Change to directory inside the chroot before running the command"
+        " or login shell. Use the current directory if it exists in the chroot."
+        " Otherwise fall back to the user's home directory (and create the"
+        " directory if it is missing).",
     )
     parser.add_argument(
         "-u",
         "--user",
         default=getpass.getuser(),
-        help="Run as a different user. The default is to run as %(default)s and fallback to root"
-        " if that user does not exist in the chroot.",
+        help="Run as a different user. The default is to run as %(default)s and"
+        " fallback to root if that user does not exist in the chroot.",
     )
     parser.add_argument(
         "-p",
@@ -224,7 +236,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
 
     args = parser.parse_args(argv)
-    args.packages = [p for packages in args.packages for p in re.split("[, ]", packages)]
+    args.packages = [
+        p for packages in args.packages for p in re.split("[, ]", packages)
+    ]
     args.proposed_components = re.split("[, ]", args.proposed_components)
 
     return args

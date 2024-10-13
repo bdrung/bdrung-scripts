@@ -36,4 +36,7 @@ class IsortTestCase(unittest.TestCase):
         process = subprocess.run(cmd, capture_output=True, check=False, text=True)
 
         if process.returncode != 0:  # pragma: no cover
-            self.fail(f"isort found unsorted Python import definitions:\n{process.stdout.strip()}")
+            self.fail(
+                f"isort found unsorted Python import definitions:\n"
+                f"{process.stdout.strip()}"
+            )

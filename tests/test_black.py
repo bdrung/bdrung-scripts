@@ -36,6 +36,11 @@ class BlackTestCase(unittest.TestCase):
         process = subprocess.run(cmd, capture_output=True, check=False, text=True)
 
         if process.returncode == 1:  # pragma: no cover
-            self.fail(f"black found code that needs reformatting:\n{process.stdout.strip()}")
+            self.fail(
+                f"black found code that needs reformatting:\n{process.stdout.strip()}"
+            )
         if process.returncode != 0:  # pragma: no cover
-            self.fail(f"black exited with code {process.returncode}:\n{process.stdout.strip()}")
+            self.fail(
+                f"black exited with code {process.returncode}:\n"
+                f"{process.stdout.strip()}"
+            )

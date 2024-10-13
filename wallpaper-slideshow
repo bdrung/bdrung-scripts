@@ -86,7 +86,10 @@ WALLPAPER_TEMPLATE = """\
 
 
 def duration_str(duration: int) -> str:
-    """Return duration in the biggest useful time unit (years, days, hours, minutes, seconds)."""
+    """Return duration in the biggest useful time unit.
+
+    Return the given duration formatted in the biggest useful time unit
+    (years, days, hours, minutes, seconds)."""
     if duration < 60:
         return f"{duration} seconds"
     if duration < 3600:
@@ -111,8 +114,8 @@ def main() -> None:
         "-f",
         "--filename",
         help=(
-            f"Filename for background file in {BACKGROUND_DIRECTORY} and wallpaper file "
-            f"in {WALLPAPER_DIRECTORY} (default: derive from given name)"
+            f"Filename for background file in {BACKGROUND_DIRECTORY} and wallpaper"
+            f" file in {WALLPAPER_DIRECTORY} (default: derive from given name)"
         ),
     )
     parser.add_argument(
@@ -127,12 +130,14 @@ def main() -> None:
         "--transition-duration",
         default=5.0,
         type=float,
-        help="Duration in seconds of transition between two images (default: %(default)s)",
+        help="Duration in seconds of transition between two images"
+        " (default: %(default)s)",
     )
     parser.add_argument(
         "directory",
         nargs="*",
-        help="Directory containing the images for the slideshow (default: current directory)",
+        help="Directory containing the images for the slideshow"
+        " (default: current directory)",
     )
     args = parser.parse_args()
     logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
@@ -144,8 +149,8 @@ def main() -> None:
         args.filename = re.sub(" ", "_", args.name)
     if not re.match(r"^\w+$", args.filename):
         parser.error(
-            f"Invalid filename '{args.filename}'. It must only contain alphanumeric character "
-            f"and the underscore. Please specify one with --filename."
+            f"Invalid filename '{args.filename}'. It must only contain alphanumeric"
+            f" character and the underscore. Please specify one with --filename."
         )
 
     images = []
@@ -167,12 +172,18 @@ def main() -> None:
     with open(background_filename, "w", encoding="utf-8") as background_file:
         background_file.write(output)
     logger.info("Created background file '%s'.", background_filename)
-    full_duration = len(images) * args.duration + (len(images) - 1) * args.transition_duration
+    full_duration = (
+        len(images) * args.duration + (len(images) - 1) * args.transition_duration
+    )
     logger.info("A full duration takes %s.", duration_str(full_duration))
 
     template = environment.from_string(WALLPAPER_TEMPLATE)
-    relative_background_filename = os.path.relpath(background_filename, os.path.expanduser("~"))
-    output = template.render(name=args.name, background_filename=relative_background_filename)
+    relative_background_filename = os.path.relpath(
+        background_filename, os.path.expanduser("~")
+    )
+    output = template.render(
+        name=args.name, background_filename=relative_background_filename
+    )
     wallpaper_filename = os.path.join(WALLPAPER_DIRECTORY, args.filename + ".xml")
     with open(wallpaper_filename, "w", encoding="utf-8") as wallpaper_file:
         wallpaper_file.write(output)

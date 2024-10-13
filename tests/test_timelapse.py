@@ -100,7 +100,9 @@ class TestTimelapse(unittest.TestCase):
     @unittest.mock.patch("subprocess.run")
     def test_ffmpeg_missing(self, run_mock: unittest.mock.MagicMock) -> None:
         """Basic test case for generate_timelapse()."""
-        run_mock.side_effect = FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "ffmpeg")
+        run_mock.side_effect = FileNotFoundError(
+            errno.ENOENT, os.strerror(errno.ENOENT), "ffmpeg"
+        )
         args = parse_args([])
 
         with self.assertLogs(level="WARNING") as context_manager:
@@ -109,7 +111,8 @@ class TestTimelapse(unittest.TestCase):
             )
         self.assertEqual(len(context_manager.output), 1, context_manager.output)
         self.assertRegex(
-            context_manager.output[0], "^ERROR.*ffmpeg not found. Please install ffmpeg!$"
+            context_manager.output[0],
+            "^ERROR.*ffmpeg not found. Please install ffmpeg!$",
         )
         self.assertEqual(returncode, 1)
         run_mock.assert_called_once()
@@ -166,9 +169,21 @@ class TestTimelapse(unittest.TestCase):
             input_dir = pathlib.Path(tempdir) / "Input directory"
             input_dir.mkdir()
             shutil.copy(FIXTURES / "black_vga.jpg", input_dir)
-            output_video = pathlib.Path(tempdir) / "output_1920x1080_24fps_libx264_crf23.mp4"
+            output_video = (
+                pathlib.Path(tempdir) / "output_1920x1080_24fps_libx264_crf23.mp4"
+            )
             output_video.touch()
             self.assertEqual(
-                main(["-d", str(input_dir), "-o", str(output_video.parent), "-n", "output"]), 0
+                main(
+                    [
+                        "-d",
+                        str(input_dir),
+                        "-o",
+                        str(output_video.parent),
+                        "-n",
+                        "output",
+                    ]
+                ),
+                0,
             )
         run_mock.assert_not_called()

@@ -110,7 +110,10 @@ class Size:
 
 
 def generate_timelapse(
-    args: argparse.Namespace, output_name: pathlib.Path, output_size: Size, input_size: Size
+    args: argparse.Namespace,
+    output_name: pathlib.Path,
+    output_size: Size,
+    input_size: Size,
 ) -> int:
     """Generate the time-lapse.
 
@@ -199,14 +202,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--crop-top",
         default=50,
         type=int,
-        help="Percentage to crop from the top compared to the bottom (default: %(default)s%%)",
+        help="Percentage to crop from the top compared to the bottom"
+        " (default: %(default)s%%)",
     )
     parser.add_argument(
         "-l",
         "--crop-left",
         default=50,
         type=int,
-        help="Percentage to crop from the left compared to the right (default: %(default)s%%)",
+        help="Percentage to crop from the left compared to the right"
+        " (default: %(default)s%%)",
     )
     args = parser.parse_args(argv)
 
@@ -228,9 +233,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def _determine_output_filename(name: str, args: argparse.Namespace) -> str:
     if not name:
         name = args.directory.name.replace(" ", "_")
-    return (
-        f"{name}_{args.size}_{args.fps}fps_{args.codec.name}_crf{args.crf}.{args.codec.container}"
-    )
+    basename = f"{name}_{args.size}_{args.fps}fps_{args.codec.name}_crf{args.crf}"
+    return f"{basename}.{args.codec.container}"
 
 
 def _get_input_images(directory: pathlib.Path) -> list[pathlib.Path]:
@@ -247,7 +251,9 @@ def main(argv: list[str]) -> int:
     if not input_images:
         logger.error("Found no input JPEG images in '%s'.", args.directory)
         return 1
-    logger.info("Found %i input JPEG images in '%s'.", len(input_images), args.directory)
+    logger.info(
+        "Found %i input JPEG images in '%s'.", len(input_images), args.directory
+    )
 
     input_size = Size.from_image(input_images[0])
     output_name = args.output / _determine_output_filename(args.name, args)

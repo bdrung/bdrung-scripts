@@ -39,7 +39,9 @@ class RunMock:
     call_count: int = 0
 
 
-def run_side_effect(responses: list[RunMock]) -> Callable[..., subprocess.CompletedProcess[str]]:
+def run_side_effect(
+    responses: list[RunMock],
+) -> Callable[..., subprocess.CompletedProcess[str]]:
     """Side effect for subprocess.run mocks.
 
     The args parameter from the subprocess.run call is looked up in the
@@ -48,7 +50,9 @@ def run_side_effect(responses: list[RunMock]) -> Callable[..., subprocess.Comple
     subprocess.run parameters.
     """
 
-    def _subprocess_run_mock(args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    def _subprocess_run_mock(
+        args: list[str], **kwargs: Any
+    ) -> subprocess.CompletedProcess[str]:
         for response in responses:
             if response.args == args:
                 response.call_count += 1
@@ -56,7 +60,9 @@ def run_side_effect(responses: list[RunMock]) -> Callable[..., subprocess.Comple
                     args, response.returncode, response.stdout, response.stderr
                 )
         extra_args = "".join([f", {k}={v!r}" for k, v in kwargs.items()])
-        raise NotImplementedError(f"No response specified for subprocess.run({args=}{extra_args})")
+        raise NotImplementedError(
+            f"No response specified for subprocess.run({args=}{extra_args})"
+        )
 
     return _subprocess_run_mock
 
@@ -76,7 +82,9 @@ class TestSchrootWrapper(unittest.TestCase):
         )  # pragma: no cover
 
     @unittest.mock.patch("subprocess.run")
-    def test_install_packages_deb_files(self, run_mock: unittest.mock.MagicMock) -> None:
+    def test_install_packages_deb_files(
+        self, run_mock: unittest.mock.MagicMock
+    ) -> None:
         """Basic test case for the main function."""
         root_call = ["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r", "--"]
         mocks = [
@@ -133,7 +141,9 @@ class TestSchrootWrapper(unittest.TestCase):
                 ],
                 0,
             ),
-            RunMock(["schroot", "-c", "session-id", "-d", "/path", "-u", user, "-r"], 0),
+            RunMock(
+                ["schroot", "-c", "session-id", "-d", "/path", "-u", user, "-r"], 0
+            ),
             RunMock(["schroot", "-c", "session-id", "-e"], 0),
         ]
         run_mock.side_effect = run_side_effect(mocks)
@@ -143,7 +153,9 @@ class TestSchrootWrapper(unittest.TestCase):
         self.assertEqual(run_mock.call_count, len(mocks))
 
     @unittest.mock.patch("subprocess.run")
-    def test_main_fallback_home_directory(self, run_mock: unittest.mock.MagicMock) -> None:
+    def test_main_fallback_home_directory(
+        self, run_mock: unittest.mock.MagicMock
+    ) -> None:
         """main(): Check fall back to home directory."""
         root_call = ["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r", "--"]
         mocks = [
@@ -151,7 +163,9 @@ class TestSchrootWrapper(unittest.TestCase):
             RunMock(root_call + ["test", "-d", "/non-existing"], 1),
             RunMock(root_call + ["sh", "-c", "realpath ~me"], 0, "/home/me\n"),
             RunMock(root_call + ["test", "-d", "/home/me"], 0),
-            RunMock(["schroot", "-c", "session-id", "-d", "/home/me", "-u", "me", "-r"], 37),
+            RunMock(
+                ["schroot", "-c", "session-id", "-d", "/home/me", "-u", "me", "-r"], 37
+            ),
             RunMock(["schroot", "-c", "session-id", "-e"], 0),
         ]
         run_mock.side_effect = run_side_effect(mocks)
@@ -161,7 +175,9 @@ class TestSchrootWrapper(unittest.TestCase):
         self.assertEqual(run_mock.call_count, len(mocks))
 
     @unittest.mock.patch("subprocess.run")
-    def test_main_missing_home_directory(self, run_mock: unittest.mock.MagicMock) -> None:
+    def test_main_missing_home_directory(
+        self, run_mock: unittest.mock.MagicMock
+    ) -> None:
         """main(): Check fall back to home directory and creating it."""
         root_call = ["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r", "--"]
         mocks = [
@@ -170,7 +186,9 @@ class TestSchrootWrapper(unittest.TestCase):
             RunMock(root_call + ["sh", "-c", "realpath ~me"], 0, "/home/me\n"),
             RunMock(root_call + ["test", "-d", "/home/me"], 1),
             RunMock(root_call + ["install", "-d", "-o", "me", "/home/me"], 0),
-            RunMock(["schroot", "-c", "session-id", "-d", "/home/me", "-u", "me", "-r"], 37),
+            RunMock(
+                ["schroot", "-c", "session-id", "-d", "/home/me", "-u", "me", "-r"], 37
+            ),
             RunMock(["schroot", "-c", "session-id", "-e"], 0),
         ]
         run_mock.side_effect = run_side_effect(mocks)
@@ -180,7 +198,9 @@ class TestSchrootWrapper(unittest.TestCase):
         self.assertEqual(run_mock.call_count, len(mocks))
 
     @unittest.mock.patch("subprocess.run")
-    def test_main_enable_ubuntu_proposed(self, run_mock: unittest.mock.MagicMock) -> None:
+    def test_main_enable_ubuntu_proposed(
+        self, run_mock: unittest.mock.MagicMock
+    ) -> None:
         """main(): Enable Ubuntu proposed repository."""
         root_call = ["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r", "--"]
         proposed_sources = (
@@ -193,7 +213,8 @@ class TestSchrootWrapper(unittest.TestCase):
             RunMock(["schroot", "-c", "focal", "-b"], 0, "session-id\n"),
             RunMock(root_call + ["test", "-d", "/root"], 0),
             RunMock(
-                root_call + ["sh", "-c", '. /etc/os-release && echo "$VERSION_CODENAME"'],
+                root_call
+                + ["sh", "-c", '. /etc/os-release && echo "$VERSION_CODENAME"'],
                 0,
                 "focal\n",
             ),
@@ -222,7 +243,9 @@ class TestSchrootWrapper(unittest.TestCase):
                 ],
                 0,
             ),
-            RunMock(["schroot", "-c", "session-id", "-d", "/root", "-u", "root", "-r"], 0),
+            RunMock(
+                ["schroot", "-c", "session-id", "-d", "/root", "-u", "root", "-r"], 0
+            ),
             RunMock(["schroot", "-c", "session-id", "-e"], 0),
         ]
         run_mock.side_effect = run_side_effect(mocks)
@@ -250,7 +273,9 @@ class TestSchrootWrapper(unittest.TestCase):
             RunMock(["schroot", "-c", "mantic", "-b"], 0, "session-id\n"),
             RunMock(root_call + ["test", "-d", "/"], 0),
             RunMock(root_call + ["apt-get", "update"], 0),
-            RunMock(root_call + apt_install + ["software-properties-common", "gpg-agent"], 0),
+            RunMock(
+                root_call + apt_install + ["software-properties-common", "gpg-agent"], 0
+            ),
             RunMock(root_call + ["add-apt-repository", "-y", "ppa:bdrung/ppa"], 0),
             RunMock(root_call + ["add-apt-repository", "-y", "ppa:bdrung/staging"], 0),
             RunMock(["schroot", "-c", "session-id", "-d", "/", "-u", "root", "-r"], 42),

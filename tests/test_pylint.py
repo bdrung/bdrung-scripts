@@ -42,13 +42,17 @@ class PylintTestCase(unittest.TestCase):
         process = subprocess.run(cmd, capture_output=True, check=False, text=True)
 
         if process.returncode != 0:  # pragma: no cover
-            # Strip trailing summary (introduced in pylint 1.7). This summary might look like:
+            # Strip trailing summary (introduced in pylint 1.7).
+            # This summary might look like:
             #
             # ------------------------------------
             # Your code has been rated at 10.00/10
             #
             out = re.sub(
-                "^(-+|Your code has been rated at .*)$", "", process.stdout, flags=re.MULTILINE
+                "^(-+|Your code has been rated at .*)$",
+                "",
+                process.stdout,
+                flags=re.MULTILINE,
             ).rstrip()
 
             # Strip logging of used config file (introduced in pylint 1.8)

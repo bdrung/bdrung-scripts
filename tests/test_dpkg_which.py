@@ -59,14 +59,20 @@ class TestDpkgWhich(unittest.TestCase):
         """Test dpkg_which to fallback to check non-/usr path."""
         run_mock.side_effect = [
             subprocess.CompletedProcess(
-                MagicMock(), 1, "", "dpkg-query: no path found matching pattern /usr/bin/ls"
+                MagicMock(),
+                1,
+                "",
+                "dpkg-query: no path found matching pattern /usr/bin/ls",
             ),
             subprocess.CompletedProcess(MagicMock(), 0, "coreutils: /bin/ls", ""),
         ]
         self.assertEqual(dpkg_which("ls"), "coreutils: /bin/ls")
         self.assertEqual(run_mock.call_count, 2)
         run_mock.assert_called_with(
-            ["dpkg", "-S", pathlib.Path("/bin/ls")], capture_output=True, check=False, text=True
+            ["dpkg", "-S", pathlib.Path("/bin/ls")],
+            capture_output=True,
+            check=False,
+            text=True,
         )
 
     @unittest.mock.patch("shutil.which")
@@ -78,7 +84,9 @@ class TestDpkgWhich(unittest.TestCase):
 
     @unittest.mock.patch("shutil.which")
     @unittest.mock.patch("pathlib.Path.resolve")
-    def test_non_usr_merge(self, resolve_mock: MagicMock, which_mock: MagicMock) -> None:
+    def test_non_usr_merge(
+        self, resolve_mock: MagicMock, which_mock: MagicMock
+    ) -> None:
         """Test command installed outside of dpkg."""
         which_mock.return_value = "/sbin/non-existing"
         resolve_mock.return_value = pathlib.Path("/sbin/non-existing")

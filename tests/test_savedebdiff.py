@@ -31,7 +31,7 @@ from .scripts.savedebdiff import (
 )
 
 LIBEVENT_CHANGELOG_DIFF = """\
-diff -Nru libevent-2.1.12-stable/debian/changelog libevent-2.1.12-stable/debian/changelog
+diff -Nru libevent-2.1.12-stable/d/changelog libevent-2.1.12-stable/d/changelog
 --- libevent-2.1.12-stable/debian/changelog	2022-04-15 17:26:52.000000000 +0200
 +++ libevent-2.1.12-stable/debian/changelog	2022-10-05 19:13:56.000000000 +0200
 @@ -1,3 +1,10 @@
@@ -47,7 +47,7 @@ diff -Nru libevent-2.1.12-stable/debian/changelog libevent-2.1.12-stable/debian/
    * d/control: Update maintainer
 """
 LIBEVENT_CONTROL_DIFF = """\
-diff -Nru libevent-2.1.12-stable/debian/control libevent-2.1.12-stable/debian/control
+diff -Nru libevent-2.1.12-stable/d/control libevent-2.1.12-stable/d/control
 --- libevent-2.1.12-stable/debian/control	2022-04-15 17:26:42.000000000 +0200
 +++ libevent-2.1.12-stable/debian/control	2022-10-05 19:07:42.000000000 +0200
 @@ -1,5 +1,6 @@
@@ -61,7 +61,7 @@ diff -Nru libevent-2.1.12-stable/debian/control libevent-2.1.12-stable/debian/co
 """
 LIBEVENT_DEBDIFF = LIBEVENT_CHANGELOG_DIFF + LIBEVENT_CONTROL_DIFF
 MISSING_VERSION_DEBDIFF = """\
-diff -Nru apport-2.23.1-0ubuntu3.1/debian/changelog apport-2.23.1-0ubuntu3.2/debian/changelog
+diff -Nru apport-2.23.1-0ubuntu3.1/d/changelog apport-2.23.1-0ubuntu3.2/d/changelog
 --- apport-2.23.1-0ubuntu3.1/debian/changelog	2023-04-12 11:24:37.000000000 +0200
 +++ apport-2.23.1-0ubuntu3.2/debian/changelog	2023-04-12 12:38:24.000000000 +0200
 @@ -3,8 +3,6 @@
@@ -75,7 +75,7 @@ diff -Nru apport-2.23.1-0ubuntu3.1/debian/changelog apport-2.23.1-0ubuntu3.2/deb
      - d/p/Replace-sudo-by-dropping-privileges-ourselves.patch: Replace sudo by
 """
 UPDATE_MANAGER_DEBDIFF = """\
-diff -Nru update-manager-22.10.7/debian/changelog update-manager-23.04.1/debian/changelog
+diff -Nru update-manager-22.10.7/d/changelog update-manager-23.04.1/d/changelog
 --- update-manager-22.10.7/debian/changelog	2023-02-02 04:07:52.000000000 +0100
 +++ update-manager-23.04.1/debian/changelog	2023-02-13 14:17:03.000000000 +0100
 @@ -1,3 +1,14 @@
@@ -111,7 +111,9 @@ class TestSavedebdiff(unittest.TestCase):
         self.assertRaises(ValueError, derive_filename_from_debdiff, missing_version)
 
     def test_derive_filename_from_debdiff_with_epoch(self) -> None:
-        filename = derive_filename_from_debdiff(unidiff.PatchSet(UPDATE_MANAGER_DEBDIFF))
+        filename = derive_filename_from_debdiff(
+            unidiff.PatchSet(UPDATE_MANAGER_DEBDIFF)
+        )
         self.assertEqual(filename, "update-manager_23.04.1.debdiff")
 
     def test_debian_changelog_not_found(self) -> None:
@@ -123,7 +125,9 @@ class TestSavedebdiff(unittest.TestCase):
         stdin_mock.read.return_value = LIBEVENT_DEBDIFF
         with tempfile.TemporaryDirectory(prefix=self.PREFIX) as tmpdir:
             main(["--directory", tmpdir])
-            self.assertEqual(os.listdir(tmpdir), ["libevent_2.1.12-stable-5ubuntu1.debdiff"])
+            self.assertEqual(
+                os.listdir(tmpdir), ["libevent_2.1.12-stable-5ubuntu1.debdiff"]
+            )
         stdin_mock.read.assert_called_once_with()
 
     @unittest.mock.patch("sys.stdin")
@@ -149,7 +153,9 @@ class TestSavedebdiff(unittest.TestCase):
     @unittest.mock.patch("sys.stdin")
     def test_main_working_directory(stdin_mock: MagicMock) -> None:
         stdin_mock.read.return_value = LIBEVENT_DEBDIFF
-        with unittest.mock.patch("builtins.open", unittest.mock.mock_open()) as mock_file:
+        with unittest.mock.patch(
+            "builtins.open", unittest.mock.mock_open()
+        ) as mock_file:
             main([])
             mock_file.assert_called_once_with(
                 "libevent_2.1.12-stable-5ubuntu1.debdiff", "w", encoding="utf-8"
@@ -171,7 +177,9 @@ class TestSavedebdiff(unittest.TestCase):
             self.assertEqual(os.stat(filename), stat)
 
             # Test changed content
-            self.assertRaisesRegex(SystemExit, "1", save_debdiff, filename, "changed\n", False)
+            self.assertRaisesRegex(
+                SystemExit, "1", save_debdiff, filename, "changed\n", False
+            )
 
             # Test overwriting content
             save_debdiff(filename, "changed\n", True)

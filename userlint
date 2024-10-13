@@ -41,7 +41,9 @@ def get_tld_re() -> str:
 
 EMAIL_RE = re.compile(rf"^[A-Za-z0-9.+_-]+@[A-Za-z0-9.+-]+\.(?:{get_tld_re()})$")
 INVALID_NAME_RE = re.compile("^[a-z0-9.+_-]*$")
-NAME_AND_EMAIL_RE = re.compile(rf"^(.*) ([A-Za-z0-9.+_-]+@[A-Za-z0-9.+-]+\.(?:{get_tld_re()}))$")
+NAME_AND_EMAIL_RE = re.compile(
+    rf"^(.*) ([A-Za-z0-9.+_-]+@[A-Za-z0-9.+-]+\.(?:{get_tld_re()}))$"
+)
 
 
 class Person:
@@ -53,10 +55,16 @@ class Person:
         self.function = function
 
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, Person) and self.name == other.name and self.email == other.email
+        return (
+            isinstance(other, Person)
+            and self.name == other.name
+            and self.email == other.email
+        )
 
     def __lt__(self, other: Self) -> bool:
-        return self.name < other.name or (self.name == other.name and self.email < other.email)
+        return self.name < other.name or (
+            self.name == other.name and self.email < other.email
+        )
 
     def __hash__(self) -> int:
         return hash(str(self))
@@ -74,7 +82,9 @@ class Person:
         """Heuristic check if the name and public email is valid."""
         return is_valid_name(self.name) and is_valid_email(self.email)
 
-    def _get_found_match(self, matches: list[Self], match_on: str, match_value: str) -> str | None:
+    def _get_found_match(
+        self, matches: list[Self], match_on: str, match_value: str
+    ) -> str | None:
         if len(matches) == 1:
             return f"{matches[0]} {self}"
         logger = logging.getLogger(__script_name__)
@@ -204,7 +214,9 @@ def classify_poeple(
         )
     else:
         logger.info(
-            "Checked %i commits, found %i valid and no invalid entries.", commits, len(valid)
+            "Checked %i commits, found %i valid and no invalid entries.",
+            commits,
+            len(valid),
         )
     return valid, invalid
 
