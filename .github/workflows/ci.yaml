@@ -18,11 +18,12 @@ jobs:
       fail-fast: false
       matrix:
         container:
-          - debian:bookworm-slim
-          - debian:trixie-slim
+          - debian:stable-slim
+          - debian:testing-slim
           - debian:unstable-slim
-          - ubuntu:noble
-          - ubuntu:oracular
+          - ubuntu:latest
+          - ubuntu:rolling
+          - ubuntu:devel
     container:
       image: ${{ matrix.container }}
     steps:
