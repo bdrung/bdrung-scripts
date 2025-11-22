@@ -169,6 +169,19 @@ Constant Rate Factor (CRF) for better quality from the current directory:
 timelapse -c libx265 -s 3840x2160 --crf 23 --fps 60
 ```
 
+tinycom
+-------
+
+This is a small wrapper around `picocom` or `screen` to not have to remember
+the parameters. It connects picocom or screen (`-s`) to the first `ttyUSB`
+device with baud-rate 115200.
+
+Example call:
+
+```
+tinycom
+```
+
 userlint
 --------
 
