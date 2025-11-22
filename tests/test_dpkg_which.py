@@ -34,8 +34,8 @@ class TestDpkgWhich(unittest.TestCase):
         """Test successfully finding the command."""
         stdout = io.StringIO()
         with contextlib.redirect_stdout(stdout):
-            returncode = main(["sort"])
-        self.assertEqual(stdout.getvalue(), "coreutils: /usr/bin/sort\n")
+            returncode = main(["gunzip"])
+        self.assertEqual(stdout.getvalue(), "gzip: /usr/bin/gunzip\n")
         self.assertEqual(returncode, 0)
 
     def test_main_failure(self) -> None:
@@ -50,8 +50,8 @@ class TestDpkgWhich(unittest.TestCase):
         """Test finding only one of two commands."""
         stdout = io.StringIO()
         with contextlib.redirect_stdout(stdout):
-            returncode = main(["non-existing-binary", "sort"])
-        self.assertEqual(stdout.getvalue(), "coreutils: /usr/bin/sort\n")
+            returncode = main(["non-existing-binary", "gunzip"])
+        self.assertEqual(stdout.getvalue(), "gzip: /usr/bin/gunzip\n")
         self.assertEqual(returncode, 1)
 
     @unittest.mock.patch("subprocess.run")
@@ -62,14 +62,14 @@ class TestDpkgWhich(unittest.TestCase):
                 MagicMock(),
                 1,
                 "",
-                "dpkg-query: no path found matching pattern /usr/bin/ls",
+                "dpkg-query: no path found matching pattern /usr/bin/zcat",
             ),
-            subprocess.CompletedProcess(MagicMock(), 0, "coreutils: /bin/ls", ""),
+            subprocess.CompletedProcess(MagicMock(), 0, "gzip: /bin/zcat", ""),
         ]
-        self.assertEqual(dpkg_which("ls"), "coreutils: /bin/ls")
+        self.assertEqual(dpkg_which("zcat"), "gzip: /bin/zcat")
         self.assertEqual(run_mock.call_count, 2)
         run_mock.assert_called_with(
-            ["dpkg", "-S", pathlib.Path("/bin/ls")],
+            ["dpkg", "-S", pathlib.Path("/bin/zcat")],
             capture_output=True,
             check=False,
             text=True,
