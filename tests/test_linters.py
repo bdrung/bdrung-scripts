@@ -17,6 +17,7 @@
 import contextlib
 import io
 import os
+import re
 import tempfile
 import unittest
 import unittest.mock
@@ -59,15 +60,16 @@ class TestLinters(unittest.TestCase):
             with open(shell, "w", encoding="utf-8") as shell_file:
                 shell_file.write("#!/bin/sh\necho $HOME\n")
 
+            output = run_shellcheck([shell], False)
             self.assertEqual(
-                run_shellcheck([shell], False),
+                re.sub(" $", "", output, flags=re.MULTILINE),
                 f"""shellcheck found issues:
 
 In {shell} line 2:
 echo $HOME
      ^---^ SC2086 (info): Double quote to prevent globbing and word splitting.
 
-Did you mean:{' '}
+Did you mean:
 echo "$HOME"
 
 For more information:
