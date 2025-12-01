@@ -25,6 +25,7 @@ def get_source_files() -> list[str]:
         "ansi2html-wrapper",
         "copy-mtime",
         "dpkg-which",
+        "find-repo",
         "generate-gallery",
         "savedebdiff",
         "schroot-wrapper",

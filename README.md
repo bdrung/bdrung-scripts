@@ -96,6 +96,17 @@ Example call:
 dpkg-which readlink
 ```
 
+find-repo
+---------
+
+Search for git repositories. Try exact match first, then regular expression.
+Search in the current directory or the directory specified in `--directory`.
+Example call:
+
+```
+find-repo dpkg
+```
+
 generate-gallery
 ----------------
 

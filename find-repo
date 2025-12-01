@@ -1,0 +1,63 @@
+#!/usr/bin/python3
+
+# Copyright (C) 2025, Benjamin Drung <bdrung@ubuntu.com>
+# SPDX-License-Identifier: ISC
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name
+
+"""Search for git repositories. Try exact match first, then regular expression."""
+
+import argparse
+import pathlib
+import re
+import sys
+from collections.abc import Iterator
+
+
+def find_all_repositories(base_path: pathlib.Path) -> Iterator[pathlib.Path]:
+    """Find all git repositories in the given directory."""
+    for dirpath, dirnames, _ in base_path.walk():
+        if ".git" in dirnames:
+            yield dirpath
+            dirnames.clear()
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse command line arguments and return namespace."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-C",
+        "--directory",
+        default=pathlib.Path("."),
+        type=pathlib.Path,
+        help="search in the given directory",
+    )
+    parser.add_argument("name")
+
+    args = parser.parse_args(argv)
+    return args
+
+
+def main(argv: list[str]) -> int:
+    """Search for git repositories."""
+    args = parse_args(argv)
+
+    all_repos = sorted(find_all_repositories(args.directory))
+
+    exact_matches = [str(x) for x in all_repos if x.name == args.name]
+    if exact_matches:
+        print("\n".join(exact_matches))
+        return 0
+
+    prog = re.compile(args.name)
+    matches = [str(x) for x in all_repos if prog.search(x.name)]
+    if matches:
+        print("\n".join(matches))
+        return 0
+
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))  # pragma: no cover
