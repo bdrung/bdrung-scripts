@@ -4,6 +4,21 @@ Various personal scripts
 This repository contains various small personal scripts that have no other place to live. Feel free
 to grub through the list.
 
+ansi2html-wrapper
+-----------------
+
+Wrap the `ansi2html` command to convert an ANSI log into an HTML page,
+converting ANSI color codes into appropriate tags.
+The wrapper script will take an ANSI file name as input and writes the HTML page to a `.html` file.
+`ansi2html-wrapper` will detect gzip-compressed log files and will decode them.
+It takes the option `--open` to open the HTML page with the preferred browser (using `xdg-open`).
+
+Example call:
+
+```
+ansi2html-wrapper --open log.gz
+```
+
 bzr2git
 -------
 
