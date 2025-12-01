@@ -75,7 +75,15 @@ if test -z "${bzr_repository-}"; then
 	exit 1
 fi
 
-for binary in brz git git-filter-repo userlint; do
+brz=brz
+if ! which "$brz" >/dev/null; then
+	brz=bzr
+	if ! which "$brz" >/dev/null; then
+		echo "${0##*/}: Neither command 'brz' nor 'bzr' found. Please install one of them." >&2
+		exit 1
+	fi
+fi
+for binary in git git-filter-repo userlint; do
 	if ! which "$binary" >/dev/null; then
 		echo "${0##*/}: Required command '$binary' not found. Please install it." >&2
 		exit 1
@@ -92,10 +100,10 @@ else
 	fi
 	if test -d "${bzr_directory}"; then
 		cd "$bzr_directory"
-		brz pull
+		$brz pull
 		cd ..
 	else
-		brz branch "${bzr_repository}" "${bzr_directory}"
+		$brz branch "${bzr_repository}" "${bzr_directory}"
 	fi
 fi
 
@@ -112,7 +120,7 @@ mkdir "${git_directory}"
 
 cd "${git_directory}"
 git init --initial-branch=master
-brz fast-export --plain "../${bzr_directory}" | git fast-import
+$brz fast-export --plain "../${bzr_directory}" | git fast-import
 git reset --hard
 git branch -m master main
 git-filter-repo --force --replace-refs=delete-no-add "${git_filter_repo_args[@]}"
