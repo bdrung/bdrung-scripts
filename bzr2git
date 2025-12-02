@@ -1,6 +1,14 @@
 #!/bin/bash
 set -eu
 
+check_command() {
+	local command="$1"
+	if ! which "$command" >/dev/null; then
+		echo "${0##*/}: Required command '$command' not found. Please install it." >&2
+		return 1
+	fi
+}
+
 usage() {
 	cat >&2 <<EOF
 ${0##*/} [-c|--commit-callback <body or filename>] [--force] [-h|--help]
@@ -84,10 +92,7 @@ if ! which "$brz" >/dev/null; then
 	fi
 fi
 for binary in git git-filter-repo userlint; do
-	if ! which "$binary" >/dev/null; then
-		echo "${0##*/}: Required command '$binary' not found. Please install it." >&2
-		exit 1
-	fi
+	check_command "$binary"
 done
 
 if test -d "${bzr_repository}"; then
