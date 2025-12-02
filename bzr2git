@@ -91,7 +91,7 @@ if ! which "$brz" >/dev/null; then
 		exit 1
 	fi
 fi
-for binary in git userlint; do
+for binary in git man userlint; do
 	check_command "$binary"
 done
 if [ -n "${git_filter_repo_args[*]}" ]; then
@@ -127,7 +127,11 @@ fi
 mkdir "${git_directory}"
 
 cd "${git_directory}"
-git init --initial-branch=master
+if git init --help | grep -q -- --initial-branch; then
+	git init --initial-branch=master
+else
+	git init
+fi
 git remote add origin "$git_repository"
 $brz fast-export --plain "../${bzr_directory}" | git fast-import
 git reset --hard
