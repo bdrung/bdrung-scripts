@@ -91,9 +91,12 @@ if ! which "$brz" >/dev/null; then
 		exit 1
 	fi
 fi
-for binary in git git-filter-repo userlint; do
+for binary in git userlint; do
 	check_command "$binary"
 done
+if [ -n "${git_filter_repo_args[*]}" ]; then
+	check_command git-filter-repo
+fi
 
 if test -d "${bzr_repository}"; then
 	bzr_directory=$(realpath --relative-to=. "$bzr_repository")
@@ -129,8 +132,10 @@ git remote add origin "$git_repository"
 $brz fast-export --plain "../${bzr_directory}" | git fast-import
 git reset --hard
 git branch -m master main
-git-filter-repo --force --replace-refs=delete-no-add "${git_filter_repo_args[@]}"
-git remote add origin "$git_repository"
+if [ -n "${git_filter_repo_args[*]}" ]; then
+	git-filter-repo --force --replace-refs=delete-no-add "${git_filter_repo_args[@]}"
+	git remote add origin "$git_repository"
+fi
 cd ..
 
 # Check resulting git repository
