@@ -2,6 +2,7 @@
 line-length = 88
 
 [tool.isort]
+extra_standard_library = ["tomllib"]
 line_length = 88
 profile = "black"
 
@@ -17,6 +18,11 @@ persistent = false
 [tool.pylint.format]
 # Maximum number of characters on a single line.
 max-line-length = 88
+
+[tool.pylint.imports]
+# Force import order to recognize a module as part of the standard compatibility
+# libraries.
+known-standard-library = ["tomllib"]
 
 [tool.pylint."messages control"]
 # Disable the message, report, category or checker with the given id(s). You can

@@ -23,6 +23,7 @@ def get_source_files() -> list[str]:
     """Return a list of sources files/directories (to check with flake8/pylint)."""
     scripts = [
         "ansi2html-wrapper",
+        "atem-set-pip-position",
         "copy-mtime",
         "dpkg-which",
         "find-repo",

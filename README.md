@@ -19,6 +19,31 @@ Example call:
 ansi2html-wrapper --open log.gz
 ```
 
+atem-set-pip-position
+---------------------
+
+This script will communicate with a Blackmagic Design ATEM video mixer via a
+network connection. It will set the position of a DVE keyer similar to the
+picture in picture buttons of many ATEM Mini video mixers.
+
+It can be configured via a TOML configuration file `atem.toml` in the XDG
+config home directory (normally `~/.config/atem.toml`). Example config:
+
+```
+mixer = "192.0.2.42"
+index = 0
+keyer = 0
+border = 300
+size = 200
+```
+
+Then call `atem-set-pip-position` and specify the position,
+for example `tr` for top right:
+
+```
+atem-set-pip-position tr
+```
+
 bzr2git
 -------
 

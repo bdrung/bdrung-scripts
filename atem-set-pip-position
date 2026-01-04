@@ -1,0 +1,321 @@
+#!/usr/bin/python3
+
+# Copyright 2024-2026 Benjamin Drung <bdrung@posteo.de>
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name
+
+"""Set the position of a DVE keyer in an ATEM video mixer.
+
+This script will communicate with a Blackmagic Design ATEM video mixer via a
+network connection. It will set the position of a DVE keyer similar to the
+picture in picture buttons of many ATEM Mini video mixers.
+"""
+
+import argparse
+import dataclasses
+import os
+import pathlib
+import sys
+import tomllib
+import typing
+
+from pyatem.command import KeyPropertiesDveCommand
+from pyatem.protocol import AtemProtocol
+
+XDG_CONFIG_DIR = os.environ.get("XDG_CONFIG_HOME", str(pathlib.Path.home() / ".config"))
+DEFAULT_CONFIG = os.path.join(XDG_CONFIG_DIR, "atem.toml")
+DEFAULT_INDEX = 0
+DEFAULT_KEYER = 0
+DEFAULT_BORDER = 300
+DEFAULT_SIZE = 200
+
+MAX_X = 16000
+MAX_Y = 9000
+
+# ATEM Mini:
+# pos_x=12500 pos_y=7000 size=200
+
+
+@dataclasses.dataclass
+class Position:
+    """Requested position of the upstream/downstream DVE keyer."""
+
+    long_name: str
+    names: list[str]
+    pos_x: int
+    pos_y: int
+
+    def matches(self, name: str) -> bool:
+        """Check if the given name matches one of the position names."""
+        return name == self.long_name or name in self.names
+
+
+POSITIONS = (
+    Position("top left", ["tl", "lt", "lo", "ol"], -1, 1),
+    Position("top", ["t", "o"], 0, 1),
+    Position("top right", ["tr", "rt", "ro", "or"], 1, 1),
+    Position("right", ["r"], 1, 0),
+    Position("bottom right", ["br", "rb", "ru", "ur"], 1, -1),
+    Position("bottom", ["b", "u"], 0, -1),
+    Position("bottom left", ["bl", "lb", "ul", "lu"], -1, -1),
+    Position("left", ["l"], -1, 0),
+    Position("middle", ["m"], 0, 0),
+)
+
+
+@dataclasses.dataclass
+class Config:
+    """Configuration."""
+
+    mixer: str | None
+    index: int
+    keyer: int
+    border: int
+    size: int
+
+    @classmethod
+    def defaults(cls) -> typing.Self:
+        """Return configuration with default settings."""
+        return cls(None, DEFAULT_INDEX, DEFAULT_KEYER, DEFAULT_BORDER, DEFAULT_SIZE)
+
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def update(
+        self,
+        mixer: str | None,
+        index: int | None,
+        keyer: int | None,
+        border: int | None,
+        size: int | None,
+    ) -> None:
+        """Update configuration with given settings."""
+        if mixer is not None:
+            self.mixer = mixer
+        if index is not None:
+            self.index = index
+        if keyer is not None:
+            self.keyer = keyer
+        if border is not None:
+            self.border = border
+        if size is not None:
+            self.size = size
+
+    def update_from_config_file(self, config_filename: str) -> None:
+        """Update configuration with settings from given TOML file."""
+        with open(config_filename, "rb") as config_file:
+            config = tomllib.load(config_file)
+        self.update(
+            config.get("mixer"),
+            config.get("index"),
+            config.get("keyer"),
+            config.get("border"),
+            config.get("size"),
+        )
+
+
+def _calc_position(maximum: int, size_in_permille: int, border: int) -> int:
+    return maximum - round(maximum * (size_in_permille / 1000)) - border
+
+
+class Mixer:
+    """ATEM video mixer."""
+
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def __init__(
+        self,
+        ip: str,
+        index: int,
+        keyer: int,
+        border: int,
+        size: int,
+        position: Position,
+    ) -> None:
+        self.switcher = AtemProtocol(ip)
+        self.index = index
+        self.keyer = keyer
+        self.border = border
+        self.size = size
+        self.position = position
+        self.done = False
+
+    @classmethod
+    def from_config_and_position(
+        cls, config: Config, position: Position
+    ) -> typing.Self:
+        """Construct Mixer object from Config and Position data classes."""
+        assert config.mixer is not None
+        return cls(
+            config.mixer,
+            config.index,
+            config.keyer,
+            config.border,
+            config.size,
+            position,
+        )
+
+    def connect(self) -> None:
+        """Connect to mixer."""
+        self.switcher.on("connected", self._on_connected)
+        self.switcher.connect()
+
+    def _on_connected(self) -> None:
+        self._set_keyer()
+        self.done = True
+
+    def run(self) -> None:
+        """Set the position of a DVE keyer."""
+        while not self.done:
+            self.switcher.loop()
+        self.switcher.loop()
+
+    def _set_keyer(self) -> None:
+        pos_x = self.position.pos_x * _calc_position(MAX_X, self.size, self.border)
+        pos_y = self.position.pos_y * _calc_position(MAX_Y, self.size, self.border)
+        dve_properties = KeyPropertiesDveCommand(
+            index=self.index,
+            keyer=self.keyer,
+            size_x=self.size,
+            size_y=self.size,
+            pos_x=pos_x,
+            pos_y=pos_y,
+            rotation=0,
+            border_enabled=True,
+            shadow_enabled=False,
+            outer_width=0,
+            inner_width=20,  # percent related to source image
+            outer_softness=0,
+            inner_softness=0,
+            bevel_softness=0,
+            bevel_position=0,
+            border_opacity=100,
+            border_hue=0,
+            border_saturation=0,
+            border_luma=0,
+            angle=360,
+            altitude=25,
+            mask_enabled=False,
+            mask_top=0,
+            mask_bottom=0,
+            mask_left=0,
+            mask_right=0,
+            rate=30,
+        )
+        self.switcher.send_commands([dve_properties])
+        print(
+            f"Set keyer {self.keyer} DVE to position x={pos_x} and y={pos_y}"
+            f" and size={self.size}"
+        )
+        self.done = True
+
+
+def get_position(position_name: str) -> Position:
+    """Get position object by name."""
+    for i, position in enumerate(POSITIONS):
+        if position.matches(position_name) or position_name == str(i):
+            return position
+    raise RuntimeError(
+        f"Position '{position_name}' not found."
+        f" See --list-positions for available positions."
+    )
+
+
+def list_positions() -> None:
+    """Print the available positions."""
+    print("Available positions (use long name, number, or short name):")
+    for i, position in enumerate(POSITIONS):
+        print(f"{i} {position.long_name}: {' '.join(position.names)}")
+
+
+def parse_args(argv: list[str]) -> tuple[Config, Position | None]:
+    """Parse command line arguments and return a tuple of Config and Position.
+
+    Return `None` as `Position` for listing all available postions."""
+    config = Config.defaults()
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "-c",
+        "--config",
+        default=DEFAULT_CONFIG if os.path.exists(DEFAULT_CONFIG) else None,
+        help=f"TOML configuration file (default: {DEFAULT_CONFIG})",
+    )
+    parser.add_argument(
+        "-m",
+        "--mixer",
+        help="IP address of the mixer to connect to (default: %(default)s)",
+    )
+    parser.add_argument(
+        "-i", "--index", type=int, help=f"M/E index (default: {config.index})"
+    )
+    parser.add_argument(
+        "-k", "--keyer", type=int, help=f"Keyer index (default: {config.keyer})"
+    )
+    parser.add_argument(
+        "-b",
+        "--border",
+        type=int,
+        help=f"border of picture in picture in absolute numbers"
+        f" (default: {config.border})",
+    )
+    parser.add_argument(
+        "-s",
+        "--size",
+        type=int,
+        help=f"size (width and height) of picture in picture in per mille"
+        f" (default: {config.size})",
+    )
+    parser.add_argument(
+        "-l", "--list-positions", action="store_true", help="List available positions"
+    )
+    parser.add_argument(
+        "position",
+        nargs="?",
+        help="position (e. g. 'tr' for top right;"
+        " see --list-positions for all possible positions)",
+    )
+    args = parser.parse_args(argv)
+
+    if args.config is not None:
+        config.update_from_config_file(args.config)
+    config.update(args.mixer, args.index, args.keyer, args.border, args.size)
+
+    if args.list_positions:
+        return config, None
+
+    if args.position is None:
+        parser.error("the following argument are required: position")
+    try:
+        position = get_position(args.position)
+    except RuntimeError as error:
+        parser.error(str(error))
+    if config.mixer is None:
+        parser.error("no mixer IP specified")
+    return config, position
+
+
+def main(argv: list[str]) -> int:
+    """Set the position of a DVE keyer in an ATEM video mixer."""
+    config, position = parse_args(argv)
+    if position is None:
+        list_positions()
+        return 0
+    switcher = Mixer.from_config_and_position(config, position)
+    switcher.connect()
+    switcher.run()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))  # pragma: no cover
