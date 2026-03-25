@@ -14,7 +14,6 @@
 
 """Test savedebdiff."""
 
-
 import os
 import tempfile
 import unittest
