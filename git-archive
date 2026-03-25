@@ -27,7 +27,9 @@ fi
 source=$(dpkg-parsechangelog -S Source)
 version=$(dpkg-parsechangelog -S Version)
 # shellcheck disable=SC2001
-version_upstream=$(echo "$version" | sed "s/-[^-]\+$//")
+version_epoch_upstream=$(echo "$version" | sed -e 's/-[^-]*$//')
+# shellcheck disable=SC2001
+version_upstream=$(echo "$version_epoch_upstream" | sed -e 's/^[0-9]*://')
 tarball_name="../${source}_${version_upstream}.orig.tar.xz"
 
 if grep -q "^3.0 (quilt)$" debian/source/format 2>/dev/null; then
