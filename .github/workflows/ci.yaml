@@ -47,7 +47,7 @@ jobs:
       - name: Install additional dependencies for Codecov
         run: apt-get install --no-install-recommends --yes curl gpg gpg-agent
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
@@ -76,7 +76,7 @@ jobs:
       - name: Install additional dependencies for Codecov
         run: apt-get install --no-install-recommends --yes curl gpg gpg-agent
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
