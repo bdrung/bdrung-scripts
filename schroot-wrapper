@@ -28,6 +28,7 @@ import platform
 import re
 import subprocess
 import sys
+import types
 import typing
 
 LOG_FORMAT = "%(name)s %(levelname)s: %(message)s"
@@ -54,7 +55,10 @@ class SchrootSession:
         return self
 
     def __exit__(
-        self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
     ) -> None:
         assert self.session
         subprocess.run(["schroot", "-c", self.session, "-e"], check=True)
