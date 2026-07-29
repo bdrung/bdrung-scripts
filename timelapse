@@ -142,8 +142,10 @@ def generate_timelapse(
             "-i",
             f"{args.directory}/{INPUT_GLOB}",
             "-filter:v",
-            f"crop={crop_size.width}:{crop_size.height}:{crop_left}:{crop_top},"
-            f"scale={output_size.width}:{output_size.height}",
+            (
+                f"crop={crop_size.width}:{crop_size.height}:{crop_left}:{crop_top},"
+                f"scale={output_size.width}:{output_size.height}"
+            ),
             "-vcodec",
             args.codec.name,
             "-crf",

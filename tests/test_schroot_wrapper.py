@@ -223,8 +223,10 @@ class TestSchrootWrapper(unittest.TestCase):
                 + [
                     "sh",
                     "-c",
-                    f"printf '{proposed_sources}' "
-                    f"> /etc/apt/sources.list.d/ubuntu-proposed.sources",
+                    (
+                        f"printf '{proposed_sources}' "
+                        f"> /etc/apt/sources.list.d/ubuntu-proposed.sources"
+                    ),
                 ],
                 0,
             ),
