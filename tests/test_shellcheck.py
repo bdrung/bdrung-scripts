@@ -28,9 +28,7 @@ def run_shellcheck(shell_scripts: list[str], verbose: bool) -> str:
     cmd = ["shellcheck"] + shell_scripts
     if verbose:
         sys.stderr.write(f"Running following command:\n{' '.join(cmd)}\n")
-    shellcheck = subprocess.run(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, close_fds=True
-    )
+    shellcheck = subprocess.run(cmd, capture_output=True, check=False, close_fds=True)
 
     if shellcheck.returncode == 0:
         return ""
